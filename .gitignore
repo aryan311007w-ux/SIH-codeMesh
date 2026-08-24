@@ -1,0 +1,49 @@
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ───────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env.bak
+
+# ── Environment / secrets  ─────────────────────────────────────────────────
+# NEVER commit real API keys.
+# Copy .env.example to .env, fill in your keys — keep .env local only.
+.env
+
+# ── Large data files ───────────────────────────────────────────────────────
+# accounts.csv is 12 MB of publicly available Ethereum address labels.
+# Download it separately — see README Section 7 for instructions.
+backend/data/accounts.csv
+backend/data/*.csv
+!backend/data/*.example
+
+# ── Temporary / generated files ────────────────────────────────────────────
+backend/verify_all.py
+*.log
+*.tmp
+
+# ── IDE / editor ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Build / dist ───────────────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+
+# ── Test / coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage

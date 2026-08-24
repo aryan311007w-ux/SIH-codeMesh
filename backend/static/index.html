@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAHYOG · Blockchain Intelligence · SIH-26182</title>
+  <meta name="description" content="SIH-26182 Automated Blockchain Intelligence and VASP Attribution Engine for Law Enforcement Agencies — I4C, Ministry of Home Affairs." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/vis-network.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ SIDEBAR ═══════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">⚖️</div>
+    <div>
+      <div class="brand-name">SAHYOG Intel</div>
+      <div class="brand-sub">SIH-26182 · I4C</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" id="navDashboard" onclick="showPanel('dashboard')">
+      <span class="nav-icon">🏠</span> Dashboard
+    </a>
+    <a class="nav-item" id="navTrace" onclick="showPanel('trace')">
+      <span class="nav-icon">🔍</span> New Investigation
+    </a>
+    <a class="nav-item" id="navHistory" onclick="showPanel('history')">
+      <span class="nav-icon">📋</span> Case History
+    </a>
+    <a class="nav-item" id="navAlerts" onclick="showPanel('alerts')">
+      <span class="nav-icon">🚨</span> Risk Alerts
+      <span class="nav-badge" id="alertsBadge" style="display:none">0</span>
+    </a>
+    <a class="nav-item" id="navVasps" onclick="showPanel('vasps')">
+      <span class="nav-icon">🏦</span> Known VASPs
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="health-indicator" id="healthIndicator">
+      <span class="health-dot" id="healthDot"></span>
+      <span id="healthText">Checking…</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════ MAIN ══════════ -->
+<div class="main-wrapper">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+      <h1 class="topbar-title" id="pageTitle">Dashboard</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="chain-status" id="chainStatus">
+        <span class="status-dot ok"></span> Ethereum Mainnet
+      </div>
+      <div class="case-counter" id="caseCounter">0 Cases</div>
+    </div>
+  </header>
+
+  <!-- ─── DASHBOARD PANEL ─── -->
+  <section class="panel-page" id="panelDashboard">
+    <div class="stats-grid">
+      <div class="stat-card" id="statCases">
+        <div class="stat-icon">📁</div>
+        <div class="stat-value" id="statCasesVal">0</div>
+        <div class="stat-label">Cases Traced</div>
+      </div>
+      <div class="stat-card danger" id="statHighRisk">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-value" id="statHighRiskVal">0</div>
+        <div class="stat-label">High-Risk Wallets</div>
+      </div>
+      <div class="stat-card accent" id="statVasps">
+        <div class="stat-icon">🏦</div>
+        <div class="stat-value" id="statVaspsVal">—</div>
+        <div class="stat-label">Known VASPs Loaded</div>
+      </div>
+      <div class="stat-card green" id="statChains">
+        <div class="stat-icon">🔗</div>
+        <div class="stat-value" id="statChainsVal">5</div>
+        <div class="stat-label">Chains Supported</div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="db-card">
+        <h3 class="db-card-title">Quick Investigation</h3>
+        <p class="muted" style="margin-bottom:12px;font-size:13px;">Enter a wallet address and start tracing immediately.</p>
+        <div class="quick-trace-row">
+          <input id="quickWallet" type="text" placeholder="0x... or T... or bc1..." class="input-field" />
+          <button class="btn-primary" onclick="quickTrace()">🔍 Trace</button>
+        </div>
+      </div>
+      <div class="db-card">
+        <h3 class="db-card-title">Recent Alerts</h3>
+        <div id="dashboardAlerts"><p class="muted small">No high-risk alerts yet.</p></div>
+      </div>
+      <div class="db-card">
+        <h3 class="db-card-title">Recent Cases</h3>
+        <div id="dashboardCases"><p class="muted small">No cases traced this session.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── TRACE PANEL ─── -->
+  <section class="panel-page hidden" id="panelTrace">
+    <div class="trace-container">
+
+      <!-- Search card -->
+      <div class="card">
+        <h2 class="card-title">🔍 New Wallet Investigation</h2>
+        <div class="form-grid">
+          <div class="form-group" style="flex:2;">
+            <label for="walletInput">Suspect Wallet Address</label>
+            <input id="walletInput" type="text" placeholder="0xabc... (ETH/BSC/Polygon)  or  Tabc... (Tron)  or  bc1... (Bitcoin)" class="input-field mono" />
+          </div>
+          <div class="form-group">
+            <label for="chainSelect">Blockchain</label>
+            <select id="chainSelect" class="input-field">
+              <option value="ethereum">Ethereum (ETH)</option>
+              <option value="bsc">BNB Chain (BSC)</option>
+              <option value="polygon">Polygon (MATIC)</option>
+              <option value="tron">Tron (TRX)</option>
+              <option value="bitcoin">Bitcoin (BTC)</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:0 0 90px;">
+            <label for="hopsInput">Max Hops</label>
+            <input id="hopsInput" type="number" min="1" max="6" value="3" class="input-field" style="text-align:center;" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="traceBtn" class="btn-primary" onclick="runTrace()">🚀 Start Investigation</button>
+          <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
+        </div>
+        <p class="hint">Traces the wallet's transaction graph outward across the selected chain, scores its risk level, and identifies the nearest VASP/exchange for SAHYOG routing.</p>
+      </div>
+
+      <!-- Status area -->
+      <div id="statusArea"></div>
+
+      <!-- Results -->
+      <div id="resultsArea" class="hidden">
+
+        <!-- Risk banner -->
+        <div class="risk-banner" id="riskBanner">
+          <div class="risk-banner-left">
+            <div class="risk-badge-large" id="riskBadge">LOW RISK</div>
+            <div>
+              <div class="risk-wallet-addr" id="riskWalletAddr"></div>
+              <div class="risk-typologies" id="riskTypologies"></div>
+            </div>
+          </div>
+          <div class="risk-banner-right">
+            <div class="risk-score-circle" id="riskScoreCircle">0</div>
+            <div class="small muted" style="text-align:center;">Risk Score</div>
+          </div>
+        </div>
+
+        <!-- Wallet classification + SAHYOG routing -->
+        <div class="results-row">
+          <div class="card">
+            <h3 class="card-title">🏷️ Wallet Classification</h3>
+            <div id="walletClassification"></div>
+          </div>
+          <div class="card sahyog-card">
+            <h3 class="card-title">🏛️ SAHYOG Routing</h3>
+            <div id="sahyogRouting"></div>
+            <button class="btn-secondary" id="sahyogBtn" onclick="submitToSahyog()" style="margin-top:10px;">Submit to SAHYOG Portal</button>
+          </div>
+        </div>
+
+        <!-- VASP matches + graph -->
+        <div class="results-grid">
+          <div class="card">
+            <h3 class="card-title">🏦 VASP Attribution</h3>
+            <div id="matchesList"></div>
+            <button id="reportBtn" class="btn-secondary hidden" onclick="downloadReport()">📄 Download PDF Report</button>
+          </div>
+          <div class="card graph-card">
+            <h3 class="card-title">🕸️ Transaction Graph</h3>
+            <div class="graph-legend">
+              <span class="legend-dot" style="background:#4f8cff;"></span>Target
+              <span class="legend-dot" style="background:#22c55e;"></span>VASP
+              <span class="legend-dot" style="background:#ef4444;"></span>High-Risk
+              <span class="legend-dot" style="background:#334059;"></span>Unknown
+            </div>
+            <div id="graphContainer"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── HISTORY PANEL ─── -->
+  <section class="panel-page hidden" id="panelHistory">
+    <div class="card">
+      <div class="panel-header">
+        <h2 class="card-title">📋 Case History</h2>
+        <div class="filter-row">
+          <select id="historyChainFilter" class="input-field small-select" onchange="loadHistory()">
+            <option value="">All Chains</option>
+            <option value="ethereum">Ethereum</option>
+            <option value="bsc">BNB Chain</option>
+            <option value="polygon">Polygon</option>
+            <option value="tron">Tron</option>
+            <option value="bitcoin">Bitcoin</option>
+          </select>
+          <select id="historyRiskFilter" class="input-field small-select" onchange="loadHistory()">
+            <option value="">All Risk Levels</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+        </div>
+      </div>
+      <div id="historyTable"><p class="muted">No cases yet.</p></div>
+    </div>
+  </section>
+
+  <!-- ─── ALERTS PANEL ─── -->
+  <section class="panel-page hidden" id="panelAlerts">
+    <div class="card">
+      <h2 class="card-title">🚨 High-Risk Wallet Alerts</h2>
+      <p class="muted small" style="margin-bottom:16px;">Wallets flagged with HIGH risk level during this session.</p>
+      <div id="alertsList"><p class="muted">No high-risk wallets flagged yet.</p></div>
+    </div>
+  </section>
+
+  <!-- ─── VASPs PANEL ─── -->
+  <section class="panel-page hidden" id="panelVasps">
+    <div class="card">
+      <div class="panel-header">
+        <h2 class="card-title">🏦 Known VASP Database</h2>
+        <div class="filter-row">
+          <input id="vaspSearch" type="text" placeholder="Search by name or address…" class="input-field" style="width:260px;" oninput="searchVasps()" />
+        </div>
+      </div>
+      <p class="muted small" id="vaspCount" style="margin-bottom:12px;">Loading…</p>
+      <div id="vaspList"></div>
+    </div>
+  </section>
+
+</div><!-- /main-wrapper -->
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
