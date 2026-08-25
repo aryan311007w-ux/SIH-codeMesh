@@ -49,13 +49,17 @@ _SILENT_PROBE_PATHS: set = {
     "/api/v1/health",
     "/api/v1/ping",
     # Standard browser/crawler probes
-    "/favicon.ico",
     "/robots.txt",
     "/.well-known/security.txt",
     "/.well-known/assetlinks.json",
     "/apple-app-site-association",
     "/.well-known/apple-app-site-association",
     "/sitemap.xml",
+}
+
+# Real /api/v1/* endpoints that must NOT be silently dropped
+_REAL_V1_PATHS: set = {
+    "/api/v1/dashboard/summary",
 }
 
 class SilentProbeMiddleware(BaseHTTPMiddleware):
@@ -65,9 +69,9 @@ class SilentProbeMiddleware(BaseHTTPMiddleware):
     """
     async def dispatch(self, request: Request, call_next: Callable):
         path = request.url.path
-        # Suppress any /api/v1/* path that is NOT one of our real endpoints
+        # Pass real /api/v1/* endpoints through; suppress everything else
         if path in _SILENT_PROBE_PATHS or (
-            path.startswith("/api/v1/") and path not in ("/api/v1/",)
+            path.startswith("/api/v1/") and path not in _REAL_V1_PATHS
         ):
             return Response(status_code=204)  # No Content — silent drop
         return await call_next(request)
@@ -276,6 +280,37 @@ def high_risk_alerts():
 
 
 # ---------------------------------------------------------------------------
+# Dashboard summary  (v1 versioned path used by the frontend)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/dashboard/summary")
+def dashboard_summary():
+    """Aggregated stats for the dashboard header cards."""
+    total_cases  = len(CASE_HISTORY)
+    high_risk    = sum(1 for c in CASE_HISTORY if c.get("risk", {}).get("risk_level") == "HIGH")
+    medium_risk  = sum(1 for c in CASE_HISTORY if c.get("risk", {}).get("risk_level") == "MEDIUM")
+    low_risk     = total_cases - high_risk - medium_risk
+    vasp_hits    = sum(1 for c in CASE_HISTORY if c.get("top_match"))
+
+    chains_seen: dict = {}
+    for c in CASE_HISTORY:
+        ch = c.get("chain", "unknown")
+        chains_seen[ch] = chains_seen.get(ch, 0) + 1
+
+    return {
+        "total_cases":       total_cases,
+        "high_risk_count":   high_risk,
+        "medium_risk_count": medium_risk,
+        "low_risk_count":    low_risk,
+        "vasp_hits":         vasp_hits,
+        "known_vasp_count":  len(KNOWN_VASPS),
+        "supported_chains":  list(SUPPORTED_CHAINS.keys()),
+        "chains_breakdown":  chains_seen,
+        "recent_alerts":     list(reversed(HIGH_RISK_ALERTS))[:5],
+    }
+
+
+# ---------------------------------------------------------------------------
 # VASP Reference
 # ---------------------------------------------------------------------------
 
@@ -361,6 +396,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("static/favicon.ico", media_type="image/x-icon")
 
 
 # ---------------------------------------------------------------------------

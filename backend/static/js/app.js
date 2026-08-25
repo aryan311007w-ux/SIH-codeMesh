@@ -269,27 +269,64 @@ function renderMatches(result) {
 }
 
 function renderGraph(result) {
-  const risk = result.risk || {};
-  const riskLvl = risk.risk_level || "LOW";
+  const container = document.getElementById("graphContainer");
 
+  // Guard: vis-network library must be loaded
+  if (typeof vis === "undefined") {
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  height:100%;color:var(--text3);font-size:13px;gap:10px;padding:20px;text-align:center;">
+        <span style="font-size:32px;">📡</span>
+        <b style="color:var(--text2);">Graph library failed to load</b>
+        <span>Check your internet connection or reload the page.</span>
+        <button class="btn-secondary" style="margin-top:8px;"
+          onclick="location.reload()">↺ Reload Page</button>
+      </div>`;
+    return;
+  }
+
+  // Clear previous content and show loading state
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px;"><div class="spinner"></div>&nbsp; Rendering graph…</div>';
+
+  // Delay initialization so the browser can reflow and the container gets real dimensions
+  requestAnimationFrame(() => {
+    setTimeout(() => _initVisGraph(result, container), 100);
+  });
+}
+
+function _initVisGraph(result, container) {
   const NODE_COLORS = {
-    is_root:      "#4f8cff",
-    exchange:     "#22c55e",
-    hot_wallet:   "#f59e0b",
-    mixer:        "#ef4444",
-    ransomware:   "#ef4444",
-    darknet:      "#a78bfa",
-    sanctioned:   "#ef4444",
-    defi_bridge:  "#f97316",
+    is_root:          "#4f8cff",
+    exchange:         "#22c55e",
+    hot_wallet:       "#f59e0b",
+    mixer:            "#ef4444",
+    ransomware:       "#ef4444",
+    darknet:          "#a78bfa",
+    sanctioned:       "#ef4444",
+    defi_bridge:      "#f97316",
     cross_chain_swap: "#c4b5fd",
-    deposit_wallet: "#3b82f6",
-    fraud:        "#f97316",
-    unknown_wallet: "#334059",
+    deposit_wallet:   "#3b82f6",
+    fraud:            "#f97316",
+    unknown_wallet:   "#334059",
   };
 
-  const nodes = (result.nodes || []).map(n => ({
+  // Limit nodes for performance (keep root + VASPs + high-risk first, then fill)
+  let rawNodes = result.nodes || [];
+  const MAX_NODES = 150;
+  if (rawNodes.length > MAX_NODES) {
+    const priority = rawNodes.filter(n => n.is_root || n.is_known_vasp || n.wallet_type === "mixer" || n.wallet_type === "sanctioned");
+    const rest     = rawNodes.filter(n => !n.is_root && !n.is_known_vasp && n.wallet_type !== "mixer" && n.wallet_type !== "sanctioned");
+    rawNodes = [...priority, ...rest].slice(0, MAX_NODES);
+  }
+
+  const nodeIdSet = new Set(rawNodes.map(n => n.id));
+
+  // Map for quick node-data lookup on hover
+  const nodeDataMap = new Map(rawNodes.map(n => [n.id, n]));
+
+  const nodes = rawNodes.map(n => ({
     id:    n.id,
-    label: n.is_root ? "🎯 TARGET" : (n.label || n.id.substring(0,8)),
+    label: n.is_root ? "🎯 TARGET" : (n.label || n.id.substring(0, 8)),
     color: n.is_root
       ? "#4f8cff"
       : (NODE_COLORS[n.wallet_type] || (n.is_known_vasp ? "#22c55e" : "#334059")),
@@ -297,17 +334,22 @@ function renderGraph(result) {
     shape: n.is_root
       ? "star"
       : (n.is_known_vasp ? "diamond" : (n.wallet_type === "mixer" ? "hexagon" : "dot")),
-    size:  n.is_root ? 24 : (n.is_known_vasp ? 18 : 10),
-    title: `${n.label || n.id}<br>Type: ${n.wallet_type || "unknown"}<br>${n.is_known_vasp ? "✅ Known VASP" : ""}`,
+    size:  n.is_root ? 28 : (n.is_known_vasp ? 20 : 10),
+    // No title — we use our own custom tooltip below
     borderWidth: n.is_root ? 3 : 1,
     borderWidthSelected: 4,
   }));
 
+  // Deduplicate and filter edges to only nodes in our set
   const edgeSet = new Set();
-  const edges = [];
-  (result.edges || []).forEach(e => {
+  const edges   = [];
+  const MAX_EDGES = 200;
+  for (const e of (result.edges || [])) {
+    if (edges.length >= MAX_EDGES) break;
     const key = `${e.source}->${e.target}`;
-    if (edgeSet.has(key)) return;
+    if (edgeSet.has(key)) continue;
+    // Only include edges whose both endpoints are in our visible node set
+    if (!nodeIdSet.has(e.source) || !nodeIdSet.has(e.target)) continue;
     edgeSet.add(key);
     edges.push({
       from:   e.source,
@@ -317,22 +359,113 @@ function renderGraph(result) {
       label:  e.value_eth > 0.001 ? `${e.value_eth.toFixed(4)}` : "",
       font:   { size: 8, color: "#64748b", strokeWidth: 0 },
     });
-  });
+  }
 
-  const data    = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+  // Clear loading message
+  container.innerHTML = "";
+
+  const data = {
+    nodes: new vis.DataSet(nodes),
+    edges: new vis.DataSet(edges),
+  };
+
+  const isLargeGraph = nodes.length > 80;
+
   const options = {
     physics: {
-      stabilization: { iterations: 150 },
-      barnesHut: { gravitationalConstant: -4000, springLength: 80 },
+      enabled: true,
+      stabilization: {
+        enabled: true,
+        iterations: isLargeGraph ? 80 : 150,
+        updateInterval: 25,
+      },
+      barnesHut: {
+        gravitationalConstant: isLargeGraph ? -2000 : -4000,
+        springLength: isLargeGraph ? 120 : 80,
+        springConstant: 0.04,
+        damping: 0.3,
+      },
     },
-    interaction: { hover: true, tooltipDelay: 100 },
-    layout: { improvedLayout: true },
+    interaction: { hover: true, tooltipDelay: 9999999, zoomView: true, dragView: true },
+    layout: {
+      improvedLayout: nodes.length < 50,
+      randomSeed: 42,
+    },
   };
 
   if (network) network.destroy();
-  network = new vis.Network(
-    document.getElementById("graphContainer"), data, options
-  );
+  network = new vis.Network(container, data, options);
+
+  // ── Custom tooltip ──────────────────────────────────────────────────────
+  // Create a single floating tooltip div reused for every node
+  let graphTooltip = document.getElementById("graphTooltip");
+  if (!graphTooltip) {
+    graphTooltip = document.createElement("div");
+    graphTooltip.id = "graphTooltip";
+    graphTooltip.style.cssText = [
+      "position:fixed",
+      "z-index:9999",
+      "pointer-events:none",
+      "display:none",
+      "background:#0d1b2e",
+      "border:1px solid #2563eb",
+      "border-radius:10px",
+      "padding:10px 14px",
+      "font-family:Inter,sans-serif",
+      "font-size:12px",
+      "color:#e2e8f0",
+      "line-height:1.65",
+      "max-width:280px",
+      "box-shadow:0 8px 32px rgba(0,0,0,.7)",
+    ].join(";");
+    document.body.appendChild(graphTooltip);
+  }
+
+  // Track mouse position relative to viewport
+  container.addEventListener("mousemove", (e) => {
+    const pad = 16;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    // Keep tooltip inside viewport
+    if (x + 300 > window.innerWidth)  x = e.clientX - 300 - pad;
+    if (y + 160 > window.innerHeight) y = e.clientY - 160 - pad;
+    graphTooltip.style.left = x + "px";
+    graphTooltip.style.top  = y + "px";
+  });
+
+  network.on("hoverNode", ({ node }) => {
+    const n = nodeDataMap.get(node);
+    if (!n) return;
+    const typeLabel = (n.wallet_type || "unknown_wallet").replace(/_/g, " ");
+    const fullAddr  = n.label || n.id;
+    const shortAddr = fullAddr.length > 20
+      ? fullAddr.substring(0, 10) + "…" + fullAddr.slice(-6)
+      : fullAddr;
+
+    let badge = "";
+    if (n.is_root)       badge = `<span style="background:#1e3a5f;color:#60a5fa;border-radius:4px;padding:1px 6px;font-size:10px;margin-left:6px;">🎯 Target</span>`;
+    else if (n.is_known_vasp) badge = `<span style="background:#14532d;color:#4ade80;border-radius:4px;padding:1px 6px;font-size:10px;margin-left:6px;">✅ VASP</span>`;
+
+    graphTooltip.innerHTML = `
+      <div style="font-weight:700;color:#60a5fa;margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+        <span style="font-family:monospace;font-size:11px;">${shortAddr}</span>${badge}
+      </div>
+      <div style="display:flex;gap:16px;">
+        <span style="color:#94a3b8;">Type</span>
+        <span style="color:#e2e8f0;font-weight:500;text-transform:capitalize;">${typeLabel}</span>
+      </div>`;
+    graphTooltip.style.display = "block";
+  });
+
+  network.on("blurNode", () => { graphTooltip.style.display = "none"; });
+  network.on("dragStart", () => { graphTooltip.style.display = "none"; });
+  network.on("zoom",      () => { graphTooltip.style.display = "none"; });
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Stop physics after stabilization to prevent ongoing CPU use
+  network.on("stabilizationIterationsDone", () => {
+    network.setOptions({ physics: { enabled: false } });
+  });
 }
 
 // ═══════════════════════════════ HISTORY ═══════════════════════════════

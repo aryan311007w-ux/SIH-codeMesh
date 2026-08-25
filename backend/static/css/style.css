@@ -516,7 +516,7 @@ select.input-field { cursor: pointer; }
 .graph-card { display: flex; flex-direction: column; }
 .graph-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; font-size: 11px; color: var(--text3); align-items: center; }
 .legend-dot   { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; }
-#graphContainer { height: 380px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060c18; flex: 1; }
+#graphContainer { min-height: 400px; height: 400px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #060c18; position: relative; overflow: hidden; }
 
 /* ════════════════════ HISTORY TABLE ════════════════════ */
 .history-table { width: 100%; border-collapse: collapse; }
