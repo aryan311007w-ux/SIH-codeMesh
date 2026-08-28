@@ -68,7 +68,10 @@ async function checkHealth() {
     const text = document.getElementById("healthText");
     if (data.api_key_configured) {
       dot.className  = "health-dot ok";
-      text.textContent = `${(data.known_vasp_count / 1000).toFixed(0)}k VASPs`;
+      const vaspK = data.known_vasp_count >= 1000
+        ? `${(data.known_vasp_count / 1000).toFixed(0)}k VASPs`
+        : `${data.known_vasp_count} VASPs`;
+      text.textContent = vaspK;
     } else {
       dot.className  = "health-dot warn";
       text.textContent = "Demo mode";
