@@ -29,9 +29,60 @@ ETHERSCAN_V2_URL = "https://api.etherscan.io/v2/api"
 TRONGRID_URL     = "https://api.trongrid.io"
 BLOCKSTREAM_URL  = "https://blockstream.info/api"
 
+# Default retry settings for all adapters
+_DEFAULT_RETRIES   = 3
+_DEFAULT_BACKOFF   = 1.0   # base backoff in seconds, doubles each retry
+_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
+
 
 class BlockchainClientError(Exception):
     """Raised when the underlying data source fails or rate-limits us."""
+
+
+# ---------------------------------------------------------------------------
+# Shared retry helper
+# ---------------------------------------------------------------------------
+
+def _request_with_retry(method, url, retries=_DEFAULT_RETRIES, backoff=_DEFAULT_BACKOFF,
+                        _status_codes=None, **kwargs):
+    """
+    HTTP request with exponential-backoff retry on transient errors.
+
+    Retries on: 429 (rate limit), 500, 502, 503, 504.
+    Raises BlockchainClientError if all retries are exhausted.
+    """
+    _status_codes = _status_codes or _RETRY_STATUS_CODES
+    last_exc = None
+    last_status = None
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.request(method, url, timeout=15, **kwargs)
+        except requests.RequestException as e:
+            last_exc = e
+            if attempt < retries:
+                time.sleep(backoff * (2 ** (attempt - 1)))
+                continue
+            raise BlockchainClientError(f"Request failed after {retries} attempts: {e}")
+
+        if resp.status_code not in _status_codes:
+            return resp
+
+        # Transient error — wait and retry
+        last_status = resp.status_code
+        if attempt < retries:
+            wait = backoff * (2 ** (attempt - 1))
+            # Respect Retry-After header if present (e.g. from 429)
+            retry_after = resp.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    wait = max(wait, float(retry_after))
+                except ValueError:
+                    pass
+            time.sleep(wait)
+
+    raise BlockchainClientError(
+        f"{method} {url} failed after {retries} attempts (last status: {last_status})."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +114,10 @@ class EVMAdapter:
         }
         time.sleep(self.request_delay)
         try:
-            resp = requests.get(ETHERSCAN_V2_URL, params=params, timeout=15)
+            resp = _request_with_retry("GET", ETHERSCAN_V2_URL, params=params, timeout=15)
             resp.raise_for_status()
+        except BlockchainClientError:
+            raise
         except requests.RequestException as e:
             raise BlockchainClientError(f"EVM request failed for {wallet}: {e}")
 
@@ -110,8 +163,10 @@ class TronAdapter:
         params  = {"limit": max_results, "order_by": "block_timestamp,desc"}
         time.sleep(self.request_delay)
         try:
-            resp = requests.get(url, params=params, headers=headers, timeout=15)
+            resp = _request_with_retry("GET", url, params=params, headers=headers, timeout=15)
             resp.raise_for_status()
+        except BlockchainClientError:
+            raise
         except requests.RequestException as e:
             raise BlockchainClientError(f"TronGrid request failed for {wallet}: {e}")
 

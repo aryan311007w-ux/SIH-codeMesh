@@ -62,6 +62,17 @@ from feature_extractor  import (
     compute_interaction_strength,
     compute_temporal_recency,
 )
+from chains             import SUPPORTED_CHAINS
+
+# Chain-specific native-token divisors for converting raw smallest-unit values
+# (wei for EVM, satoshis for BTC, sun for TRX) to human-readable amounts.
+_NATIVE_DIVISOR = {
+    "ethereum":  10 ** 18,
+    "bsc":       10 ** 18,
+    "polygon":   10 ** 18,
+    "tron":      10 ** 6,
+    "bitcoin":   10 ** 8,
+}
 
 # ---------------------------------------------------------------------------
 # VASP Evidence Quality mapping
@@ -156,7 +167,8 @@ class WalletTracer:
                     continue
 
                 try:
-                    value_native = int(tx.get("value", 0)) / (10 ** 18)
+                    divisor = _NATIVE_DIVISOR.get(chain, 10 ** 18)
+                    value_native = int(tx.get("value", 0)) / divisor
                 except (ValueError, TypeError):
                     value_native = 0.0
 

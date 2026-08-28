@@ -151,6 +151,7 @@ body {
   transition: background 0.3s;
 }
 .health-dot.ok  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.health-dot.warn { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
 .health-dot.err { background: var(--red);   box-shadow: 0 0 6px var(--red); }
 
 /* ════════════════════ MAIN WRAPPER ════════════════════ */

@@ -87,7 +87,8 @@ def test_vasp_attribution():
 # Test 2: Risk scoring
 # ---------------------------------------------------------------------------
 
-def test_risk_scoring(result):
+def test_risk_scoring():
+    result = tracer.trace(fake_client.ROOT, chain="ethereum")
     risk = result.get("risk", {})
     assert "risk_score"  in risk, "Missing risk_score"
     assert "risk_level"  in risk, "Missing risk_level"
@@ -108,7 +109,8 @@ def test_risk_scoring(result):
 # Test 3: Wallet classification
 # ---------------------------------------------------------------------------
 
-def test_wallet_classification(result):
+def test_wallet_classification():
+    result = tracer.trace(fake_client.ROOT, chain="ethereum")
     cls = result.get("wallet_classification", {})
     assert "type"   in cls, "Missing classification type"
     assert "label"  in cls, "Missing classification label"
@@ -120,7 +122,8 @@ def test_wallet_classification(result):
 # Test 4: Wallet feature vector
 # ---------------------------------------------------------------------------
 
-def test_wallet_features(result):
+def test_wallet_features():
+    result = tracer.trace(fake_client.ROOT, chain="ethereum")
     feats = result.get("wallet_features")
     assert feats is not None, "Missing wallet_features in trace result"
 
@@ -146,7 +149,8 @@ def test_wallet_features(result):
 # Test 5: SAHYOG routing
 # ---------------------------------------------------------------------------
 
-def test_sahyog_routing(result):
+def test_sahyog_routing():
+    result = tracer.trace(fake_client.ROOT, chain="ethereum")
     routing = result.get("sahyog_routing", {})
     assert "action"          in routing, "Missing sahyog action"
     assert "disclosure_note" in routing, "Missing disclosure_note"
@@ -200,11 +204,11 @@ def test_app_loads():
 
 if __name__ == "__main__":
     print("\n=== SIH-26182 Test Suite ===\n")
-    result = test_vasp_attribution()
-    test_risk_scoring(result)
-    test_wallet_classification(result)
-    test_wallet_features(result)
-    test_sahyog_routing(result)
+    test_vasp_attribution()
+    test_risk_scoring()
+    test_wallet_classification()
+    test_wallet_features()
+    test_sahyog_routing()
     test_chain_validation()
     test_app_loads()
     print("\n=== ALL TESTS PASSED ===\n")

@@ -70,8 +70,8 @@ async function checkHealth() {
       dot.className  = "health-dot ok";
       text.textContent = `${(data.known_vasp_count / 1000).toFixed(0)}k VASPs`;
     } else {
-      dot.className  = "health-dot err";
-      text.textContent = "No API key";
+      dot.className  = "health-dot warn";
+      text.textContent = "Demo mode";
     }
     document.getElementById("statVaspsVal").textContent =
       data.known_vasp_count.toLocaleString();
@@ -151,6 +151,7 @@ async function runTrace() {
 
   document.getElementById("traceBtn").disabled = true;
   document.getElementById("resultsArea").classList.add("hidden");
+  document.getElementById("demoNotice")?.classList.add("hidden");
   setStatus(
     '<div class="spinner"></div> Tracing transaction graph across the blockchain… This may take a few seconds.',
     "loading"
@@ -162,6 +163,16 @@ async function runTrace() {
     );
     currentWallet = result.wallet;
     currentChain  = result.chain;
+
+    // Show demo mode notice if backend returned synthetic data
+    if (result._demo_mode) {
+      const notice = document.getElementById("demoNotice");
+      if (notice) {
+        notice.textContent = "⚡ Demo mode — showing synthetic trace data. Configure ETHERSCAN_API_KEY for live blockchain data.";
+        notice.classList.remove("hidden");
+      }
+    }
+
     setStatus("", null);
     renderResults(result);
     await loadDashboardStats();

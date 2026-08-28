@@ -128,3 +128,12 @@ def load_from_csv(path: str) -> dict:
                     KNOWN_VASPS[addr] = name
 
     return KNOWN_VASPS
+
+
+# Fallback: if the primary accounts.csv is absent or empty, load the demo
+# dataset so the core VASP matching feature is at least partially functional.
+if not KNOWN_VASPS:
+    _DEMO_PATH = os.path.join(os.path.dirname(__file__), "data", "demo_vasps.csv")
+    load_from_csv(_DEMO_PATH)
+    if KNOWN_VASPS:
+        print(f"[known_vasps] Fallback: loaded demo dataset with {len(KNOWN_VASPS):,} addresses.")

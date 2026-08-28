@@ -80,6 +80,7 @@ from models             import (
 )
 from report             import build_pdf_report
 from chains             import SUPPORTED_CHAINS, validate_address
+from demo_fixture       import demo_trace_result, demo_health_status
 
 load_dotenv()
 
@@ -87,6 +88,34 @@ ETHERSCAN_API_KEY  = os.getenv("ETHERSCAN_API_KEY",  "")
 TRONGRID_API_KEY   = os.getenv("TRONGRID_API_KEY",   "")
 MAX_HOPS           = int(os.getenv("MAX_HOPS",           "3"))
 MAX_TX_PER_WALLET  = int(os.getenv("MAX_TX_PER_WALLET",  "200"))
+
+# ---------------------------------------------------------------------------
+# Startup health report
+# ---------------------------------------------------------------------------
+_DEMO_MODE = not bool(ETHERSCAN_API_KEY)
+
+_ACCOUNTS_CSV = os.path.join(os.path.dirname(__file__), "data", "accounts.csv")
+_HAS_PRIMARY  = os.path.isfile(_ACCOUNTS_CSV)
+
+_VASP_SOURCE = (
+    f"primary (accounts.csv — {len(KNOWN_VASPS):,} addresses)"
+    if _HAS_PRIMARY and len(KNOWN_VASPS) > 0
+    else f"demo fallback (demo_vasps.csv — {len(KNOWN_VASPS):,} addresses)"
+)
+
+print(f"\n{'='*60}")
+print(f"  SIH-26182  Wallet-to-VASP Attribution System")
+print(f"{'='*60}")
+print(f"  Mode            : {'DEMO (no API key)' if _DEMO_MODE else 'LIVE'}")
+print(f"  VASP data       : {_VASP_SOURCE}")
+print(f"  VASP count      : {len(KNOWN_VASPS):,}")
+print(f"  Etherscan key   : {'configured' if not _DEMO_MODE else 'MISSING — add ETHERSCAN_API_KEY to .env'}")
+print(f"  TronGrid key    : {'configured' if TRONGRID_API_KEY else 'not configured'}")
+print(f"  Supported chains: {', '.join(SUPPORTED_CHAINS.keys())}")
+print(f"  Max hops        : {MAX_HOPS}")
+print(f"  Demo trace      : /api/demo/trace")
+print(f"  Health detail   : /api/health/detail")
+print(f"{'='*60}\n")
 
 app = FastAPI(
     title       = "Wallet-to-VASP Attribution System",
@@ -131,7 +160,8 @@ HIGH_RISK_ALERTS:  list = []
 
 @app.get("/api/health", response_model=HealthResponse)
 def health():
-    """Health check — returns API config status."""
+    """Health check — returns API config and data source status."""
+    demo = not bool(ETHERSCAN_API_KEY)  # True when no live API key
     return HealthResponse(
         status             = "ok",
         api_key_configured = bool(ETHERSCAN_API_KEY),
@@ -139,6 +169,62 @@ def health():
         max_hops           = MAX_HOPS,
         supported_chains   = list(SUPPORTED_CHAINS.keys()),
     )
+
+
+@app.get("/api/health/detail")
+def health_detail():
+    """
+    Detailed health check — includes data source diagnostics.
+
+    Reports:
+      - API key configuration for each blockchain source
+      - VASP dataset status (primary vs. fallback, count)
+      - Demo mode flag
+    """
+    # Detect whether the primary accounts.csv was loaded
+    accounts_path = os.path.join(os.path.dirname(__file__), "data", "accounts.csv")
+    has_primary = os.path.isfile(accounts_path) and len(KNOWN_VASPS) > 0
+
+    return {
+        **demo_health_status(),
+        "has_primary_vasp_data": has_primary,
+        "accounts_csv_present":  os.path.isfile(accounts_path),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Demo trace endpoint (offline / no-API-key mode)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/demo/trace")
+def demo_trace(
+    wallet: str = Query(..., description="Wallet address to trace (demo data)"),
+    chain:  str = Query("ethereum", description="Blockchain: ethereum|bsc|polygon|tron|bitcoin"),
+):
+    """
+    Return a deterministic demo trace result. No live API calls are made.
+
+    Use this endpoint when:
+      - ETHERSCAN_API_KEY is not configured
+      - You want deterministic output for demos/screenshots
+      - The live API is rate-limited or unavailable
+    """
+    wallet = wallet.strip().lower()
+    chain  = chain.strip().lower()
+
+    if chain not in SUPPORTED_CHAINS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported chain '{chain}'. Supported: {list(SUPPORTED_CHAINS.keys())}"
+        )
+
+    if SUPPORTED_CHAINS[chain]["type"] == "evm" and not validate_address(wallet, chain):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {SUPPORTED_CHAINS[chain]['name']} address format."
+        )
+
+    return demo_trace_result(wallet=wallet, chain=chain)
 
 
 # ---------------------------------------------------------------------------
@@ -195,9 +281,15 @@ def trace_wallet(
         )
 
     if SUPPORTED_CHAINS[chain]["type"] == "evm" and not ETHERSCAN_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="Server is missing ETHERSCAN_API_KEY. Set it in your .env file.",
+        # Auto-fallback to demo mode so the UI is never blank
+        return JSONResponse(
+            status_code=200,
+            content={
+                **demo_trace_result(wallet=wallet, chain=chain),
+                "_demo_mode": True,
+                "_warning": "Live blockchain API not configured (ETHERSCAN_API_KEY missing). "
+                            "Returning synthetic demo data. Add the API key to .env for live tracing.",
+            },
         )
 
     try:
