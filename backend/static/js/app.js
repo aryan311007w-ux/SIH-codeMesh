@@ -1,5 +1,13 @@
 /* ─── SIH-26182 — SAHYOG Blockchain Intelligence Dashboard ─── */
 
+// ─── Utility ────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 const API = "";
 let currentWallet = null;
 let currentChain  = "ethereum";
@@ -108,13 +116,21 @@ async function loadDashboardStats() {
     if (sessionCases.length === 0) {
       dcEl.innerHTML = '<p class="muted small">No cases traced this session.</p>';
     } else {
-      dcEl.innerHTML = sessionCases.slice(0, 4).map(c => {
-        const lvl = c.risk?.risk_level || "LOW";
-        return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
-          <span class="mono" style="color:var(--text2)">${c.wallet.substring(0,16)}…</span>
-          <span class="risk-pill ${lvl}">${lvl}</span>
-        </div>`;
-      }).join("");
+      dcEl.innerHTML = "";
+      sessionCases.slice(0, 4).forEach(c => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;";
+        const addr = document.createElement("span");
+        addr.className = "mono";
+        addr.style.color = "var(--text2)";
+        addr.appendChild(document.createTextNode(`${(c.wallet||"").substring(0,16)}…`));
+        const pill = document.createElement("span");
+        pill.className = `risk-pill ${c.risk?.risk_level || "LOW"}`;
+        pill.appendChild(document.createTextNode(c.risk?.risk_level || "LOW"));
+        row.appendChild(addr);
+        row.appendChild(pill);
+        dcEl.appendChild(row);
+      });
     }
 
     // Recent alerts snippet
@@ -123,12 +139,21 @@ async function loadDashboardStats() {
     if (alerts.length === 0) {
       daEl.innerHTML = '<p class="muted small">No high-risk alerts yet.</p>';
     } else {
-      daEl.innerHTML = alerts.slice(0, 4).map(a =>
-        `<div style="padding:7px 0;border-bottom:1px solid var(--border);">
-          <div class="alert-addr" style="font-size:11px;">${a.wallet.substring(0,20)}…</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${(a.typologies||[]).join(", ") || "High risk"}</div>
-        </div>`
-      ).join("");
+      daEl.innerHTML = "";
+      alerts.slice(0, 4).forEach(a => {
+        const row = document.createElement("div");
+        row.style.cssText = "padding:7px 0;border-bottom:1px solid var(--border);";
+        const addrEl = document.createElement("div");
+        addrEl.className = "alert-addr";
+        addrEl.style.cssText = "font-size:11px;";
+        addrEl.appendChild(document.createTextNode(`${(a.wallet||"").substring(0,20)}…`));
+        const typoEl = document.createElement("div");
+        typoEl.style.cssText = "font-size:11px;color:var(--text3);margin-top:2px;";
+        typoEl.appendChild(document.createTextNode((a.typologies||[]).join(", ") || "High risk"));
+        row.appendChild(addrEl);
+        row.appendChild(typoEl);
+        daEl.appendChild(row);
+      });
     }
   } catch(e) {}
 }
@@ -230,24 +255,39 @@ function renderClassification(result) {
   const type = cls.type || "unknown_wallet";
   const icon = WALLET_TYPE_ICONS[type] || "❓";
   const el = document.getElementById("walletClassification");
-  el.innerHTML = `
-    <div class="classification-pill type-${type}">${icon} ${cls.label || "Unknown"}</div>
-    <p style="font-size:12px;color:var(--text2);margin-top:6px;">${cls.reason || "—"}</p>
-    <p style="font-size:11px;color:var(--text3);margin-top:8px;">
-      Chain: <b style="color:var(--text)">${result.chain?.toUpperCase()}</b> &nbsp;·&nbsp;
-      Txs scanned: <b style="color:var(--text)">${result.total_transactions_scanned}</b> &nbsp;·&nbsp;
-      Hops: <b style="color:var(--text)">${result.hops_searched}</b>
-    </p>`;
+  el.innerHTML = "";
+  const pill = document.createElement("div");
+  pill.className = `classification-pill type-${type}`;
+  pill.appendChild(document.createTextNode(`${icon} ${cls.label || "Unknown"}`));
+  el.appendChild(pill);
+  const p1 = document.createElement("p");
+  p1.style.cssText = "font-size:12px;color:var(--text2);margin-top:6px;";
+  p1.appendChild(document.createTextNode(cls.reason || "—"));
+  el.appendChild(p1);
+  const p2 = document.createElement("p");
+  p2.style.cssText = "font-size:11px;color:var(--text3);margin-top:8px;";
+  p2.innerHTML = `Chain: <b style="color:var(--text)">${escapeHtml(result.chain?.toUpperCase())}</b> &nbsp;·&nbsp; Txs scanned: <b style="color:var(--text)">${result.total_transactions_scanned}</b> &nbsp;·&nbsp; Hops: <b style="color:var(--text)">${result.hops_searched}</b>`;
+  el.appendChild(p2);
 }
 
 function renderSahyogRouting(result) {
   const r = result.sahyog_routing || {};
   const el = document.getElementById("sahyogRouting");
-  el.innerHTML = `
-    <div class="sahyog-action">${r.action || "—"}</div>
-    <div class="sahyog-note">${r.disclosure_note || ""}</div>
-    ${r.vasp_name ? `<div style="margin-top:8px;font-size:12px;color:var(--text2);">
-      Target VASP: <b style="color:var(--text)">${r.vasp_name}</b></div>` : ""}`;
+  el.innerHTML = "";
+  const actionEl = document.createElement("div");
+  actionEl.className = "sahyog-action";
+  actionEl.appendChild(document.createTextNode(r.action || "—"));
+  el.appendChild(actionEl);
+  const noteEl = document.createElement("div");
+  noteEl.className = "sahyog-note";
+  noteEl.appendChild(document.createTextNode(r.disclosure_note || ""));
+  el.appendChild(noteEl);
+  if (r.vasp_name) {
+    const vaspEl = document.createElement("div");
+    vaspEl.style.cssText = "margin-top:8px;font-size:12px;color:var(--text2);";
+    vaspEl.innerHTML = `Target VASP: <b style="color:var(--text)">${escapeHtml(r.vasp_name)}</b>`;
+    el.appendChild(vaspEl);
+  }
 }
 
 function renderMatches(result) {
@@ -256,7 +296,10 @@ function renderMatches(result) {
   const matches = result.matches || [];
 
   if (!matches.length) {
-    el.innerHTML = `<p class="muted small">${result.note || "No known VASP match found."}</p>`;
+    const p = document.createElement("p");
+    p.className = "muted small";
+    p.appendChild(document.createTextNode(result.note || "No known VASP match found."));
+    el.appendChild(p);
     document.getElementById("reportBtn").classList.add("hidden");
     return;
   }
@@ -266,16 +309,32 @@ function renderMatches(result) {
     const cls  = conf >= 65 ? "c-high" : conf >= 35 ? "c-med" : "c-low";
     const card = document.createElement("div");
     card.className = `match-card${idx === 0 ? " top-match" : ""}`;
-    card.innerHTML = `
-      <div class="match-header">
-        <span class="match-name">${idx === 0 ? "⭐ " : ""}${m.vasp_name}</span>
-        <span class="confidence-pill ${cls}">${conf}%</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" style="width:${conf}%"></div>
-      </div>
-      <div class="match-meta">Hops: ${m.hops} &nbsp;·&nbsp; ${m.address}</div>
-      <div class="path-text">${m.path.join(" → ")}</div>`;
+    const header = document.createElement("div");
+    header.className = "match-header";
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "match-name";
+    nameSpan.appendChild(document.createTextNode(`${idx === 0 ? "⭐ " : ""}${m.vasp_name}`));
+    const confPill = document.createElement("span");
+    confPill.className = `confidence-pill ${cls}`;
+    confPill.appendChild(document.createTextNode(`${conf}%`));
+    header.appendChild(nameSpan);
+    header.appendChild(confPill);
+    card.appendChild(header);
+    const barBg = document.createElement("div");
+    barBg.className = "progress-bar-bg";
+    const barFill = document.createElement("div");
+    barFill.className = "progress-bar-fill";
+    barFill.style.width = `${conf}%`;
+    barBg.appendChild(barFill);
+    card.appendChild(barBg);
+    const meta = document.createElement("div");
+    meta.className = "match-meta";
+    meta.appendChild(document.createTextNode(`Hops: ${m.hops}  ·  ${m.address}`));
+    card.appendChild(meta);
+    const path = document.createElement("div");
+    path.className = "path-text";
+    path.appendChild(document.createTextNode(m.path.join(" → ")));
+    card.appendChild(path);
     el.appendChild(card);
   });
 
@@ -283,6 +342,13 @@ function renderMatches(result) {
 }
 
 function renderGraph(result) {
+  const container = document.getElementById("graphContainer");
+  if (typeof vis === "undefined") {
+    container.innerHTML = `<div style="text-align:center;padding:3rem;color:#64748b;font-size:0.9rem;">
+      <p style="font-size:1.4rem;">⚠️</p>
+      <p>Graph library failed to load. Please check your internet connection.</p></div>`;
+    return;
+  }
   const risk = result.risk || {};
   const riskLvl = risk.risk_level || "LOW";
 

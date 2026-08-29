@@ -44,7 +44,7 @@ class BlockchainClientError(Exception):
 # ---------------------------------------------------------------------------
 
 def _request_with_retry(method, url, retries=_DEFAULT_RETRIES, backoff=_DEFAULT_BACKOFF,
-                        _status_codes=None, **kwargs):
+                        timeout=15, _status_codes=None, **kwargs):
     """
     HTTP request with exponential-backoff retry on transient errors.
 
@@ -56,7 +56,7 @@ def _request_with_retry(method, url, retries=_DEFAULT_RETRIES, backoff=_DEFAULT_
     last_status = None
     for attempt in range(1, retries + 1):
         try:
-            resp = requests.request(method, url, timeout=15, **kwargs)
+            resp = requests.request(method, url, timeout=timeout, **kwargs)
         except requests.RequestException as e:
             last_exc = e
             if attempt < retries:

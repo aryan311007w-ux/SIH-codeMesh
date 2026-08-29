@@ -15,12 +15,8 @@ Endpoints:
   POST /api/sahyog/submit         — SAHYOG portal integration stub
 """
 
-# Suppress urllib3 / requests version mismatch warning at startup
-import warnings
-warnings.filterwarnings("ignore", category=Warning, module="requests")
-
 import os
-import logging
+import warnings
 from datetime import datetime, timezone
 from typing import Optional, Callable
 
@@ -29,26 +25,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.types import ASGIApp
 from dotenv import load_dotenv
+
+from blockchain_client import BlockchainClient, BlockchainClientError
+from known_vasps        import KNOWN_VASPS
+from tracer             import WalletTracer
+from models             import TraceResponse, HealthResponse, ChainInfo
+from report             import build_pdf_report
+from chains             import SUPPORTED_CHAINS, validate_address
+from demo_fixture       import demo_trace_result, demo_health_status
+
+warnings.filterwarnings("ignore", category=Warning, module="requests")
+load_dotenv()
+
+ETHERSCAN_API_KEY  = os.getenv("ETHERSCAN_API_KEY",  "")
+TRONGRID_API_KEY   = os.getenv("TRONGRID_API_KEY",   "")
+MAX_HOPS           = int(os.getenv("MAX_HOPS",           "3"))
+MAX_TX_PER_WALLET  = int(os.getenv("MAX_TX_PER_WALLET",  "200"))
 
 # ---------------------------------------------------------------------------
 # Silent Probe Middleware
 # Intercepts automated tool/extension probe requests at the ASGI level
 # BEFORE uvicorn logs them, returning HTTP 204 No Content silently.
-# This is needed because:
-#   - Antigravity IDE PII scanner probes /api/v1/pii/scan on every keystroke
-#   - Browser extensions probe /api/v1/site/check, /favicon.ico, etc.
 # ---------------------------------------------------------------------------
 
 _SILENT_PROBE_PATHS: set = {
-    # Antigravity IDE PII scanner
     "/api/v1/pii/scan",
-    # Browser extension probes
     "/api/v1/site/check",
     "/api/v1/health",
     "/api/v1/ping",
-    # Standard browser/crawler probes
     "/favicon.ico",
     "/robots.txt",
     "/.well-known/security.txt",
@@ -59,35 +64,14 @@ _SILENT_PROBE_PATHS: set = {
 }
 
 class SilentProbeMiddleware(BaseHTTPMiddleware):
-    """
-    Returns HTTP 204 No Content immediately for known automated probe
-    paths, without invoking the router or triggering access log entries.
-    """
+    """Returns HTTP 204 No Content for known automated probe paths."""
     async def dispatch(self, request: Request, call_next: Callable):
         path = request.url.path
-        # Suppress any /api/v1/* path that is NOT one of our real endpoints
         if path in _SILENT_PROBE_PATHS or (
             path.startswith("/api/v1/") and path not in ("/api/v1/",)
         ):
-            return Response(status_code=204)  # No Content — silent drop
+            return Response(status_code=204)
         return await call_next(request)
-
-from blockchain_client import BlockchainClient, BlockchainClientError
-from known_vasps        import KNOWN_VASPS
-from tracer             import WalletTracer
-from models             import (
-    TraceResponse, HealthResponse, ChainInfo, RiskAlertItem, RiskLevel
-)
-from report             import build_pdf_report
-from chains             import SUPPORTED_CHAINS, validate_address
-from demo_fixture       import demo_trace_result, demo_health_status
-
-load_dotenv()
-
-ETHERSCAN_API_KEY  = os.getenv("ETHERSCAN_API_KEY",  "")
-TRONGRID_API_KEY   = os.getenv("TRONGRID_API_KEY",   "")
-MAX_HOPS           = int(os.getenv("MAX_HOPS",           "3"))
-MAX_TX_PER_WALLET  = int(os.getenv("MAX_TX_PER_WALLET",  "200"))
 
 # ---------------------------------------------------------------------------
 # Startup health report
@@ -98,24 +82,22 @@ _ACCOUNTS_CSV = os.path.join(os.path.dirname(__file__), "data", "accounts.csv")
 _HAS_PRIMARY  = os.path.isfile(_ACCOUNTS_CSV)
 
 _VASP_SOURCE = (
-    f"primary (accounts.csv — {len(KNOWN_VASPS):,} addresses)"
+    "primary (accounts.csv)"
     if _HAS_PRIMARY and len(KNOWN_VASPS) > 0
-    else f"demo fallback (demo_vasps.csv — {len(KNOWN_VASPS):,} addresses)"
+    else "demo fallback"
 )
 
-print(f"\n{'='*60}")
-print(f"  SIH-26182  Wallet-to-VASP Attribution System")
-print(f"{'='*60}")
-print(f"  Mode            : {'DEMO (no API key)' if _DEMO_MODE else 'LIVE'}")
-print(f"  VASP data       : {_VASP_SOURCE}")
-print(f"  VASP count      : {len(KNOWN_VASPS):,}")
-print(f"  Etherscan key   : {'configured' if not _DEMO_MODE else 'MISSING — add ETHERSCAN_API_KEY to .env'}")
-print(f"  TronGrid key    : {'configured' if TRONGRID_API_KEY else 'not configured'}")
-print(f"  Supported chains: {', '.join(SUPPORTED_CHAINS.keys())}")
-print(f"  Max hops        : {MAX_HOPS}")
-print(f"  Demo trace      : /api/demo/trace")
-print(f"  Health detail   : /api/health/detail")
-print(f"{'='*60}\n")
+print("=" * 60)
+print("  SIH-26182  Wallet-to-VASP Attribution System")
+print("=" * 60)
+print("  Mode            :", "DEMO (no API key)" if _DEMO_MODE else "LIVE")
+print("  VASP data       :", _VASP_SOURCE)
+print("  VASP count      :", f"{len(KNOWN_VASPS):,}")
+print("  Etherscan key   :", "configured" if not _DEMO_MODE else "MISSING")
+print("  TronGrid key    :", "configured" if TRONGRID_API_KEY else "not configured")
+print("  Supported chains:", ", ".join(SUPPORTED_CHAINS.keys()))
+print("  Max hops        :", MAX_HOPS)
+print("=" * 60)
 
 app = FastAPI(
     title       = "Wallet-to-VASP Attribution System",
@@ -127,13 +109,12 @@ app = FastAPI(
     version = "2.0.0",
 )
 
-# SilentProbeMiddleware must be added FIRST (outermost layer) so it
-# intercepts probe paths before CORS processing and before access logging.
 app.add_middleware(SilentProbeMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -149,10 +130,8 @@ tracer = WalletTracer(
     max_tx_per_wallet = MAX_TX_PER_WALLET,
 )
 
-# In-memory case store (swap for DB in production)
 CASE_HISTORY:      list = []
 HIGH_RISK_ALERTS:  list = []
-
 
 # ---------------------------------------------------------------------------
 # Health & Config
@@ -161,7 +140,6 @@ HIGH_RISK_ALERTS:  list = []
 @app.get("/api/health", response_model=HealthResponse)
 def health():
     """Health check — returns API config and data source status."""
-    demo = not bool(ETHERSCAN_API_KEY)  # True when no live API key
     return HealthResponse(
         status             = "ok",
         api_key_configured = bool(ETHERSCAN_API_KEY),
@@ -173,15 +151,7 @@ def health():
 
 @app.get("/api/health/detail")
 def health_detail():
-    """
-    Detailed health check — includes data source diagnostics.
-
-    Reports:
-      - API key configuration for each blockchain source
-      - VASP dataset status (primary vs. fallback, count)
-      - Demo mode flag
-    """
-    # Detect whether the primary accounts.csv was loaded
+    """Detailed health check — includes data source diagnostics."""
     accounts_path = os.path.join(os.path.dirname(__file__), "data", "accounts.csv")
     has_primary = os.path.isfile(accounts_path) and len(KNOWN_VASPS) > 0
 
@@ -201,14 +171,7 @@ def demo_trace(
     wallet: str = Query(..., description="Wallet address to trace (demo data)"),
     chain:  str = Query("ethereum", description="Blockchain: ethereum|bsc|polygon|tron|bitcoin"),
 ):
-    """
-    Return a deterministic demo trace result. No live API calls are made.
-
-    Use this endpoint when:
-      - ETHERSCAN_API_KEY is not configured
-      - You want deterministic output for demos/screenshots
-      - The live API is rate-limited or unavailable
-    """
+    """Return a deterministic demo trace result. No live API calls are made."""
     wallet = wallet.strip().lower()
     chain  = chain.strip().lower()
 
@@ -270,7 +233,6 @@ def trace_wallet(
             detail=f"Unsupported chain '{chain}'. Supported: {list(SUPPORTED_CHAINS.keys())}"
         )
 
-    # Normalize EVM addresses to lowercase
     if SUPPORTED_CHAINS[chain]["type"] == "evm":
         wallet = wallet.lower()
 
@@ -282,15 +244,15 @@ def trace_wallet(
 
     if SUPPORTED_CHAINS[chain]["type"] == "evm" and not ETHERSCAN_API_KEY:
         # Auto-fallback to demo mode so the UI is never blank
-        return JSONResponse(
-            status_code=200,
-            content={
-                **demo_trace_result(wallet=wallet, chain=chain),
-                "_demo_mode": True,
-                "_warning": "Live blockchain API not configured (ETHERSCAN_API_KEY missing). "
-                            "Returning synthetic demo data. Add the API key to .env for live tracing.",
-            },
+        demo_result = demo_trace_result(wallet=wallet, chain=chain)
+        demo_result["timestamp"] = datetime.now(timezone.utc).isoformat()
+        demo_result["_demo_mode"] = True
+        demo_result["_warning"] = (
+            "Live blockchain API not configured (ETHERSCAN_API_KEY missing). "
+            "Returning synthetic demo data. Add the API key to .env for live tracing."
         )
+        CASE_HISTORY.append(demo_result)
+        return JSONResponse(status_code=200, content=demo_result)
 
     try:
         result = tracer.trace(wallet, chain=chain, max_hops=max_hops or MAX_HOPS)
@@ -300,7 +262,6 @@ def trace_wallet(
     result["timestamp"] = datetime.now(timezone.utc).isoformat()
     CASE_HISTORY.append(result)
 
-    # Track high-risk wallets separately for the alerts panel
     risk_level = result.get("risk", {}).get("risk_level", "LOW")
     if risk_level == "HIGH":
         HIGH_RISK_ALERTS.append({
@@ -321,10 +282,7 @@ def trace_wallet(
 
 @app.get("/api/risk/{wallet}")
 def get_risk(wallet: str, chain: str = Query("ethereum")):
-    """
-    Return the risk report for a previously traced wallet (from session cache).
-    If not cached, returns 404 — run /api/trace first.
-    """
+    """Return the risk report for a previously traced wallet (from session cache)."""
     wallet = wallet.strip().lower()
     match  = next((c for c in CASE_HISTORY if c.get("wallet") == wallet
                    and c.get("chain") == chain), None)
@@ -419,10 +377,7 @@ def download_report(wallet: str, chain: str = Query("ethereum")):
 
 @app.post("/api/sahyog/submit")
 def sahyog_submit(wallet: str = Query(...), chain: str = Query("ethereum")):
-    """
-    Stub endpoint: simulate submitting a disclosure/freeze request to SAHYOG.
-    In production, this would call the SAHYOG Portal API with the routing info.
-    """
+    """Stub: simulate submitting a disclosure/freeze request to SAHYOG."""
     wallet = wallet.strip().lower()
     match  = next(
         (c for c in CASE_HISTORY if c.get("wallet") == wallet
@@ -457,12 +412,11 @@ def root():
 
 # ---------------------------------------------------------------------------
 # Catch-all: return clean JSON 404 for any unknown route
-# (prevents browser-extension probes or scanners from getting HTML error pages)
 # ---------------------------------------------------------------------------
 
 @app.exception_handler(404)
-async def not_found_handler(request: Request, exc: HTTPException):
-    # Serve index.html for root-level non-API paths (SPA fallback)
+async def not_found_handler(request: Request, _exc: Exception):
+    """Serve index.html for SPA routes, JSON for unknown API routes."""
     path = request.url.path
     if not path.startswith("/api/") and not path.startswith("/static/"):
         return FileResponse("static/index.html")

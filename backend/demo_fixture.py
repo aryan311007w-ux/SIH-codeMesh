@@ -13,6 +13,7 @@ All values are synthetic. No real blockchain data is embedded.
 
 from __future__ import annotations
 
+import os as _os
 from datetime import datetime, timezone
 
 
@@ -20,7 +21,7 @@ from datetime import datetime, timezone
 # Synthetic wallet addresses used in the demo trace graph
 # ---------------------------------------------------------------------------
 
-_ROOT  = "0xd8da6bf26964af9d7eed9e03e53415d37a96045"
+_ROOT  = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
 _MID   = "0xbbbb000000000000000000000000000000000002"
 _VASP  = "0x28c6c06298d514db089934071355e5743bf21d60"   # Binance Hot Wallet
 _MIXER = "0x722122df12d4e14e13ac3b6895a86e84145b6967"   # Tornado Cash
@@ -164,18 +165,21 @@ def demo_trace_result(wallet: str = _ROOT, chain: str = "ethereum") -> dict:
 
 
 def demo_health_status() -> dict:
-    """Return a health status response for demo mode."""
+    """Return a health status response reflecting the actual runtime configuration."""
+    _ek = _os.getenv("ETHERSCAN_API_KEY", "")
+    _tk = _os.getenv("TRONGRID_API_KEY", "")
+    _demo = not bool(_ek)
     return {
         "status":             "ok",
-        "api_key_configured": False,
+        "api_key_configured": bool(_ek),
         "known_vasp_count":   10,
         "max_hops":           3,
         "supported_chains":   ["ethereum", "bsc", "polygon", "tron", "bitcoin"],
-        "demo_mode":          True,
+        "demo_mode":          _demo,
         "vasp_data_source":   "demo_vasps.csv (10 addresses - fallback loaded)",
         "api_sources": {
-            "etherscan": "not configured (demo mode)",
-            "trongrid":  "not configured (demo mode)",
+            "etherscan": ("configured" if _ek else "not configured (demo mode)"),
+            "trongrid":  ("configured" if _tk else "not configured (demo mode)"),
             "bitcoin":   "blockstream.info (no key required)",
         },
     }
