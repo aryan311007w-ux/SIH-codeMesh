@@ -187,16 +187,23 @@
             <div id="matchesList"></div>
             <button id="reportBtn" class="btn-secondary hidden" onclick="downloadReport()">📄 Download PDF Report</button>
           </div>
-          <div class="card graph-card">
-            <h3 class="card-title">🕸️ Transaction Graph</h3>
-            <div class="graph-legend">
-              <span class="legend-dot" style="background:#4f8cff;"></span>Target
-              <span class="legend-dot" style="background:#22c55e;"></span>VASP
-              <span class="legend-dot" style="background:#ef4444;"></span>High-Risk
-              <span class="legend-dot" style="background:#334059;"></span>Unknown
-            </div>
-            <div id="graphContainer"></div>
+          <div class="card">
+            <h3 class="card-title">📎 Evidence</h3>
+            <p class="muted small" style="margin-bottom:10px;">Transactions connecting the traced wallet to VASP candidates. Demo data is synthetic — labeled below.</p>
+            <div id="evidenceList"></div>
           </div>
+        </div>
+
+        <!-- Transaction graph (full-width) -->
+        <div class="card graph-card" style="margin-top:16px;">
+          <h3 class="card-title">🕸️ Transaction Graph</h3>
+          <div class="graph-legend">
+            <span class="legend-dot" style="background:#4f8cff;"></span>Target
+            <span class="legend-dot" style="background:#22c55e;"></span>VASP
+            <span class="legend-dot" style="background:#ef4444;"></span>High-Risk
+            <span class="legend-dot" style="background:#334059;"></span>Unknown
+          </div>
+          <div id="graphContainer"></div>
         </div>
 
       </div>

@@ -227,6 +227,7 @@ function renderResults(result) {
   renderClassification(result);
   renderSahyogRouting(result);
   renderMatches(result);
+  renderEvidence(result);
   renderGraph(result);
 }
 
@@ -339,6 +340,59 @@ function renderMatches(result) {
   });
 
   document.getElementById("reportBtn").classList.remove("hidden");
+}
+
+function renderEvidence(result) {
+  const el = document.getElementById("evidenceList");
+  if (!el) return;
+  el.innerHTML = "";
+
+  const items = result.evidence || [];
+  if (!items.length) {
+    const p = document.createElement("p");
+    p.className = "muted small";
+    p.appendChild(document.createTextNode("No transaction evidence available."));
+    el.appendChild(p);
+    return;
+  }
+
+  const dirBadge = {
+    outbound: "<span class='ev-dir out'>OUT</span>",
+    inbound:  "<span class='ev-dir in'>IN</span>",
+  };
+
+  items.forEach(tx => {
+    const row = document.createElement("div");
+    row.className = "evidence-row";
+
+    const left = document.createElement("div");
+    left.className = "ev-left";
+    left.appendChild(document.createTextNode(dirBadge[tx.direction] || tx.direction));
+    left.appendChild(document.createTextNode(" " + escapeHtml(tx.counterparty_label)));
+
+    const right = document.createElement("div");
+    right.className = "ev-right";
+    const val = document.createElement("span");
+    val.className = "ev-value";
+    val.appendChild(document.createTextNode(tx.value_eth + " ETH"));
+    right.appendChild(val);
+    const ts = document.createElement("span");
+    ts.className = "ev-ts";
+    ts.appendChild(document.createTextNode(tx.timestamp.replace("T", " ").replace("Z", "")));
+    right.appendChild(ts);
+
+    row.appendChild(left);
+    row.appendChild(right);
+
+    if (tx.note) {
+      const note = document.createElement("div");
+      note.className = "ev-note muted small";
+      note.appendChild(document.createTextNode(tx.note));
+      row.appendChild(note);
+    }
+
+    el.appendChild(row);
+  });
 }
 
 function renderGraph(result) {

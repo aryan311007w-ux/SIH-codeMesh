@@ -227,6 +227,8 @@ class TraceResponse(BaseModel):
     nodes:                      List[GraphNode]
     edges:                      List[GraphEdge]
     note:                       Optional[str] = None
+    timestamp:                  Optional[str] = None
+    evidence:                   Optional[List[Dict]] = None
 
 
 class HealthResponse(BaseModel):

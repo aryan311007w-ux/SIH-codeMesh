@@ -213,6 +213,9 @@ class WalletTracer:
         # Build graph node list
         nodes = self._build_node_list(root_wallet, path_to.keys(), all_txs)
 
+        # Build evidence list from root-wallet transactions
+        evidence = self._build_evidence(root_wallet, root_txs, chain)
+
         return {
             "wallet":                     root_wallet,
             "chain":                      chain,
@@ -224,6 +227,7 @@ class WalletTracer:
             "wallet_classification":      classification,
             "wallet_features":            wallet_features,
             "sahyog_routing":             sahyog,
+            "evidence":                   evidence,
             "nodes":                      nodes,
             "edges":                      edges[:300],
             "note": (
@@ -474,3 +478,73 @@ class WalletTracer:
                 "risk_level":    None,  # per-node risk computed for root only (performance)
             })
         return nodes
+
+    def _build_evidence(
+        self,
+        root_wallet: str,
+        root_txs: List[dict],
+        chain: str,
+    ) -> List[dict]:
+        """
+        Build an evidence list from the root-wallet's raw transactions.
+
+        Each entry shows one transaction that connects the traced wallet to
+        a counterparty, with direction, value, timestamp, and label (if the
+        counterparty is a known VASP or high-risk entity).
+        """
+        if not root_txs:
+            return []
+
+        vasp_addrs = set(self.known_vasps.keys())
+
+        # Lazy-import to avoid circular deps
+        from high_risk_addresses import is_high_risk
+        divisor = _NATIVE_DIVISOR.get(chain, 10 ** 18)
+        evidence: List[dict] = []
+
+        for tx in root_txs[:20]:  # cap for performance
+            from_addr = tx.get("from", "").lower()
+            to_addr   = tx.get("to",   "").lower()
+            if not from_addr or not to_addr:
+                continue
+
+            direction = "outbound" if from_addr == root_wallet.lower() else "inbound"
+            counterparty = to_addr if direction == "outbound" else from_addr
+
+            # Label the counterparty
+            label_parts = []
+            if counterparty in vasp_addrs:
+                label_parts.append(self.known_vasps[counterparty])
+            if is_high_risk(counterparty):
+                label_parts.append("High-Risk")
+            if not label_parts:
+                label_parts.append(f"{counterparty[:8]}…{counterparty[-6:]}")
+            label = " · ".join(label_parts)
+
+            # Convert value to ETH
+            raw_val = tx.get("value", "0")
+            try:
+                value_eth = round(int(raw_val) / divisor, 6)
+            except (ValueError, TypeError):
+                value_eth = 0.0
+
+            # Convert Unix timestamp to ISO-8601
+            raw_ts = tx.get("timeStamp") or tx.get("timestamp")
+            if raw_ts:
+                try:
+                    ts_iso = datetime.fromtimestamp(int(raw_ts), tz=timezone.utc).isoformat()
+                except (ValueError, TypeError):
+                    ts_iso = str(raw_ts)
+            else:
+                ts_iso = datetime.now(timezone.utc).isoformat()
+
+            evidence.append({
+                "tx_hash":          tx.get("hash", "—"),
+                "direction":        direction,
+                "counterparty":     counterparty,
+                "counterparty_label": label,
+                "value_eth":        value_eth,
+                "timestamp":        ts_iso,
+            })
+
+        return evidence
