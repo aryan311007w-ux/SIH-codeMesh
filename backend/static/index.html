@@ -141,6 +141,9 @@
         <div class="btn-row">
           <button id="traceBtn" class="btn-primary" onclick="runTrace()">🚀 Start Investigation</button>
           <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;margin-left:auto;">
+            <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()" /> Demo mode
+          </label>
         </div>
         <p class="hint">Traces the wallet's transaction graph outward across the selected chain, scores its risk level, and identifies the nearest VASP/exchange for SAHYOG routing.</p>
       </div>

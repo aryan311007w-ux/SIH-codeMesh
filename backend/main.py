@@ -216,9 +216,10 @@ def list_chains():
 
 @app.get("/api/trace", response_model=TraceResponse)
 def trace_wallet(
-    wallet:   str           = Query(..., description="Wallet address to trace"),
-    chain:    str           = Query("ethereum", description="Blockchain: ethereum|bsc|polygon|tron|bitcoin"),
-    max_hops: Optional[int] = Query(None, description="Override hop depth (1-6)"),
+    wallet:     str           = Query(..., description="Wallet address to trace"),
+    chain:      str           = Query("ethereum", description="Blockchain: ethereum|bsc|polygon|tron|bitcoin"),
+    max_hops:   Optional[int] = Query(None, description="Override hop depth (1-6)"),
+    demo_mode:  bool          = Query(False, description="Force demo/synthetic data (bypasses live API)"),
 ):
     """
     Core investigation endpoint. Traces the wallet's transaction graph
@@ -241,6 +242,14 @@ def trace_wallet(
             status_code=400,
             detail=f"Invalid {SUPPORTED_CHAINS[chain]['name']} address format."
         )
+
+    # Explicit demo mode toggle from frontend
+    if demo_mode:
+        demo_result = demo_trace_result(wallet=wallet, chain=chain)
+        demo_result["timestamp"] = datetime.now(timezone.utc).isoformat()
+        demo_result["_demo_mode"] = True
+        CASE_HISTORY.append(demo_result)
+        return JSONResponse(status_code=200, content=demo_result)
 
     # Auto-fallback to demo mode when the required API key is missing
     chain_type = SUPPORTED_CHAINS[chain]["type"]

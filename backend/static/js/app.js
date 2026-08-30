@@ -68,6 +68,19 @@ function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("sidebar-hidden");
 }
 
+function toggleDemoMode() {
+  const cb = document.getElementById("demoModeToggle");
+  const dot = document.getElementById("healthDot");
+  const text = document.getElementById("healthText");
+  if (cb.checked) {
+    dot.className = "health-dot warn";
+    text.textContent = "Demo mode";
+  } else {
+    dot.className = "health-dot ok";
+    text.textContent = "Live API";
+  }
+}
+
 // ═══════════════════════════════ HEALTH CHECK ══════════════════════════
 async function checkHealth() {
   try {
@@ -186,8 +199,9 @@ async function runTrace() {
   );
 
   try {
+    const isDemo = document.getElementById("demoModeToggle")?.checked || false;
     const result = await fetchJSON(
-      `/api/trace?wallet=${encodeURIComponent(wallet)}&chain=${chain}&max_hops=${hops}`
+      `/api/trace?wallet=${encodeURIComponent(wallet)}&chain=${chain}&max_hops=${hops}&demo_mode=${isDemo}`
     );
     currentWallet = result.wallet;
     currentChain  = result.chain;
@@ -412,18 +426,18 @@ function renderGraph(result) {
 
   // Legend items
   const LEGEND = [
-    { label: "Target (Root)",   color: "#4f8cff", shape: "star" },
-    { label: "VASP / Exchange", color: "#22c55e", shape: "diamond" },
-    { label: "Hot Wallet",      color: "#f59e0b", shape: "triangle" },
-    { label: "Deposit Wallet",  color: "#3b82f6", shape: "database" },
-    { label: "Mixer",           color: "#ef4444", shape: "hexagon" },
-    { label: "Ransomware",      color: "#ef4444", shape: "hexagon" },
-    { label: "Sanctioned",      color: "#ef4444", shape: "hexagon" },
-    { label: "Darknet Market",  color: "#a78bfa", shape: "hexagon" },
-    { label: "DeFi Bridge",     color: "#f97316", shape: "triangle" },
-    { label: "Cross-Chain Swap",color: "#c4b5fd", shape: "diamond" },
-    { label: "Fraud",           color: "#f97316", shape: "triangle" },
-    { label: "Unknown",         color: "#64748b", shape: "dot" },
+    { label: "Target (Root)",    color: "#3b82f6", shape: "star" },
+    { label: "VASP / Exchange",  color: "#22c55e", shape: "diamond" },
+    { label: "Hot Wallet",       color: "#eab308", shape: "triangle" },
+    { label: "Deposit Wallet",   color: "#06b6d4", shape: "database" },
+    { label: "Mixer",            color: "#ef4444", shape: "hexagon" },
+    { label: "Ransomware",       color: "#be123c", shape: "hexagon" },
+    { label: "Sanctioned",       color: "#a855f7", shape: "hexagon" },
+    { label: "Darknet Market",   color: "#6366f1", shape: "hexagon" },
+    { label: "DeFi Bridge",      color: "#f97316", shape: "triangle" },
+    { label: "Cross-Chain Swap", color: "#14b8a6", shape: "diamond" },
+    { label: "Fraud",            color: "#ec4899", shape: "triangle" },
+    { label: "Unknown",          color: "#64748b", shape: "dot" },
   ];
 
   // Build legend HTML
@@ -435,18 +449,18 @@ function renderGraph(result) {
   }
 
   const NODE_COLORS = {
-    is_root:      "#4f8cff",
-    exchange:     "#22c55e",
-    hot_wallet:   "#f59e0b",
-    mixer:        "#ef4444",
-    ransomware:   "#ef4444",
-    darknet:      "#a78bfa",
-    sanctioned:   "#ef4444",
-    defi_bridge:  "#f97316",
-    cross_chain_swap: "#c4b5fd",
-    deposit_wallet: "#3b82f6",
-    fraud:        "#f97316",
-    unknown_wallet: "#64748b",
+    is_root:         "#3b82f6",  // blue
+    exchange:        "#22c55e",  // green
+    hot_wallet:      "#eab308",  // yellow
+    deposit_wallet:  "#06b6d4",  // cyan
+    mixer:           "#ef4444",  // red
+    ransomware:      "#be123c",  // rose
+    sanctioned:      "#a855f7",  // purple
+    darknet:         "#6366f1",  // indigo
+    defi_bridge:     "#f97316",  // orange
+    cross_chain_swap:"#14b8a6",  // teal
+    fraud:           "#ec4899",  // pink
+    unknown_wallet:  "#64748b",  // slate
   };
 
   const NODE_SHAPES = {
