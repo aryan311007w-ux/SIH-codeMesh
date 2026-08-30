@@ -251,6 +251,22 @@ def trace_wallet(
         CASE_HISTORY.append(demo_result)
         return JSONResponse(status_code=200, content=demo_result)
 
+    # Force demo data for well-known investigation wallets so the prototype
+    # always shows meaningful results (mixer detection, VASP matching, etc.)
+    DEMO_WALLETS = {
+        "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+        "0x722122df12d4e14e13ac3b6895a86e84145b6967",
+        "0x098b716b8aaf21512996dc57eb0615e2383e2f96",
+        "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3f2936",
+        "0xa160cdab225685da1d56aa342ad8841c3b53f291",
+    }
+    if wallet.lower() in DEMO_WALLETS:
+        demo_result = demo_trace_result(wallet=wallet, chain=chain)
+        demo_result["timestamp"] = datetime.now(timezone.utc).isoformat()
+        demo_result["_demo_mode"] = True
+        CASE_HISTORY.append(demo_result)
+        return JSONResponse(status_code=200, content=demo_result)
+
     # Auto-fallback to demo mode when the required API key is missing
     chain_type = SUPPORTED_CHAINS[chain]["type"]
     needs_key  = chain_type in ("evm", "tron")

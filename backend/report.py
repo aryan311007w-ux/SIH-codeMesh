@@ -144,6 +144,57 @@ def build_pdf_report(trace_result: dict) -> io.BytesIO:
         ))
     story.append(Spacer(1, 0.5*cm))
 
+    # ── Score Breakdown ───────────────────────────────────────────────────
+    details = risk.get("details", {})
+    if details:
+        story.append(Paragraph("SCORE BREAKDOWN", section_style))
+        story.append(Paragraph(
+            f"<b>{risk_score}/100</b> — derived from {len(flags)} active risk signals with weighted aggregation.",
+            small_style
+        ))
+        story.append(Spacer(1, 0.1*cm))
+
+        SIG_W = {
+            "self_is_high_risk":  1.00, "sanctions_link": 0.95,
+            "ransomware_link":    0.90, "darknet_link":    0.85,
+            "fraud_link":         0.70, "mixer_interaction": 0.75,
+            "structuring":        0.50, "peel_chain":     0.40,
+            "cross_chain_bridge": 0.30, "high_velocity":   0.25,
+        }
+        SIG_LABEL = {
+            "self_is_high_risk":  "High-Risk Address",
+            "sanctions_link":     "Sanctions Proximity",
+            "ransomware_link":    "Ransomware Link",
+            "darknet_link":       "Darknet Market",
+            "fraud_link":         "Fraud Connection",
+            "mixer_interaction":  "Mixer Interaction",
+            "cross_chain_bridge": "Cross-Chain Bridge",
+            "high_velocity":      "High Velocity",
+            "structuring":        "Structuring / Smurfing",
+            "peel_chain":         "Peel Chain Pattern",
+        }
+
+        # Build a table of signal contributions
+        sig_data = [["Signal", "Raw Score", "Weight", "Contribution", "Detection Reason"]]
+        total_c = 0
+        for sig in flags:
+            raw = details.get(sig, 0)
+            w   = SIG_W.get(sig, 0.5)
+            c   = round(raw * w)
+            total_c += c
+            label = SIG_LABEL.get(sig, sig)
+            sig_data.append([
+                label, str(raw), f"{int(w*100)}%", f"+{c}",
+                SIG_W.get(sig, "0.5") > 0.5 and "Direct link" or "Behavioral"
+            ])
+        boost = min(20, (len(flags) - 1) * 5)
+        sig_data.append(["", "", "", f"<b>Sum: {total_c} + Boost: +{boost}</b>", ""])
+        sig_data.append(["", "", "", f"<b>Final: {risk_score}/100</b>", ""])
+
+        t2 = _table(sig_data, col_widths=[3.5*cm, 2*cm, 1.5*cm, 2.5*cm, 7.5*cm])
+        story.append(t2)
+        story.append(Spacer(1, 0.5*cm))
+
     # ── VASP Attribution ──────────────────────────────────────────────────
     story.append(Paragraph("VASP ATTRIBUTION RESULTS", section_style))
     story.append(Paragraph(

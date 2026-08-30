@@ -142,7 +142,10 @@
           <button id="traceBtn" class="btn-primary" onclick="runTrace()">🚀 Start Investigation</button>
           <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;margin-left:auto;">
-            <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()" /> Demo mode
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2);padding:6px 10px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border);">
+              <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()" />
+              <span>🎬 Demo mode (synthetic data)</span>
+            </label>
           </label>
         </div>
         <p class="hint">Traces the wallet's transaction graph outward across the selected chain, scores its risk level, and identifies the nearest VASP/exchange for SAHYOG routing.</p>
@@ -182,6 +185,9 @@
             <button class="btn-secondary" id="sahyogBtn" onclick="submitToSahyog()" style="margin-top:10px;">Submit to SAHYOG Portal</button>
           </div>
         </div>
+
+        <!-- Risk score breakdown -->
+        <div id="scoreCardsContainer"></div>
 
         <!-- Evidence (full-width) -->
         <div class="card" style="margin-bottom:16px;">

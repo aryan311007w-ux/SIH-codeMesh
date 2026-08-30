@@ -265,7 +265,110 @@ function renderRiskBanner(result) {
   const circle = document.getElementById("riskScoreCircle");
   circle.className = `risk-score-circle ${lvl}`;
   circle.textContent = score;
+
+  renderScoreCards(risk, score);
 }
+
+const RISK_SIGNAL_INFO = {
+  self_is_high_risk:  { label: "High-Risk Address",      desc: "Wallet is in known high-risk registry",        weight: "100%" },
+  sanctions_link:     { label: "Sanctions Proximity",    desc: "Direct transaction with OFAC-sanctioned address", weight: "95%" },
+  ransomware_link:    { label: "Ransomware Link",        desc: "Transaction with known ransomware address",   weight: "90%" },
+  darknet_link:       { label: "Darknet Market",         desc: "Transaction with darknet marketplace",        weight: "85%" },
+  fraud_link:         { label: "Fraud Connection",       desc: "Transaction with known fraud-linked address", weight: "70%" },
+  mixer_interaction:  { label: "Mixer Interaction",      desc: "Funds sent to/received from mixer/tumbler",   weight: "75%" },
+  cross_chain_bridge: { label: "Cross-Chain Bridge",     desc: "Interaction with cross-chain bridge",         weight: "30%" },
+  high_velocity:      { label: "High Velocity",          desc: "Abnormally high transaction rate",            weight: "25%" },
+  structuring:        { label: "Structuring / Smurfing", desc: "Many near-identical tx values (layering)",   weight: "50%" },
+  peel_chain:         { label: "Peel Chain Pattern",     desc: "Linear single-hop chain (classic layering)", weight: "40%" },
+};
+
+const SIGNAL_WEIGHTS = {
+  self_is_high_risk: 1.00,
+  sanctions_link:    0.95,
+  ransomware_link:   0.90,
+  darknet_link:      0.85,
+  fraud_link:        0.70,
+  mixer_interaction: 0.75,
+  structuring:       0.50,
+  peel_chain:        0.40,
+  cross_chain_bridge: 0.30,
+  high_velocity:     0.25,
+};
+
+function renderScoreCards(risk, finalScore) {
+  const container = document.getElementById("scoreCardsContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const flags      = risk.flags       || [];
+  const details    = risk.details     || {};
+  const typologies = risk.typologies || [];
+
+  if (!flags.length) {
+    container.innerHTML = '<p class="muted" style="font-size:12px;padding:8px 0;">No risk signals detected — wallet scored 0/100.</p>';
+    return;
+  }
+
+  const contributions = {};
+  let totalContrib = 0;
+  for (const sig in details) {
+    const w = SIGNAL_WEIGHTS[sig] || 0.5;
+    contributions[sig] = Math.round(details[sig] * w);
+    totalContrib += contributions[sig];
+  }
+  const boost = Math.min(20, (flags.length - 1) * 5);
+
+  const section = document.createElement("div");
+  section.style.cssText = "margin-top:16px;padding-top:16px;border-top:1px solid var(--border);";
+
+  const header = document.createElement("div");
+  header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;";
+  header.innerHTML = `<span style="font-size:13px;font-weight:600;color:var(--text);">📊 Risk Score Breakdown</span>
+    <span style="font-size:11px;color:var(--text3);">${flags.length} signal${flags.length>1?'s':''} active · +${boost} multi-signal boost</span>`;
+  section.appendChild(header);
+
+  const grid = document.createElement("div");
+  grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;";
+
+  for (const sig of flags) {
+    const info     = RISK_SIGNAL_INFO[sig] || { label: sig, desc: "", weight: "50%" };
+    const rawScore = details[sig] || 0;
+    const contrib  = contributions[sig] || 0;
+    const barColor = rawScore >= 60 ? "#ef4444" : rawScore >= 30 ? "#f59e0b" : "#22c55e";
+
+    const card = document.createElement("div");
+    card.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:600;color:var(--text);">${info.label}</span>
+        <span style="font-size:11px;color:var(--text3);">weight: ${info.weight}</span>
+      </div>
+      <p style="font-size:11px;color:var(--text2);margin:0 0 6px 0;">${info.desc}</p>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="width:${rawScore}%;height:100%;background:${barColor};border-radius:3px;transition:width .3s;"></div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:var(--text);min-width:40px;text-align:right;">${rawScore}</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px;">Weighted contribution: +${contrib}</div>
+    `;
+    grid.appendChild(card);
+  }
+
+  section.appendChild(grid);
+
+  const summary = document.createElement("div");
+  summary.style.cssText = "margin-top:10px;padding:8px 12px;background:var(--surface-2);border-radius:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;";
+  summary.innerHTML = `
+    <span style="color:var(--text2);">Sum of weighted signals: <b style="color:var(--text)">${totalContrib}</b> + boost: <b style="color:var(--text)">+${boost}</b></span>
+    <span style="color:var(--text);font-weight:700;">Final Score: ${finalScore}/100</span>
+  `;
+  section.appendChild(summary);
+
+  container.appendChild(section);
+}
+
+function round(n) { return Math.round(n); }
 
 function renderClassification(result) {
   const cls = result.wallet_classification || {};
