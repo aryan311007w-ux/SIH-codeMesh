@@ -65,7 +65,7 @@ function showPanel(name) {
 }
 
 function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar").classList.toggle("sidebar-hidden");
 }
 
 // ═══════════════════════════════ HEALTH CHECK ══════════════════════════
@@ -356,29 +356,33 @@ function renderEvidence(result) {
     return;
   }
 
-  const dirBadge = {
-    outbound: "<span class='ev-dir out'>OUT</span>",
-    inbound:  "<span class='ev-dir in'>IN</span>",
-  };
-
   items.forEach(tx => {
     const row = document.createElement("div");
     row.className = "evidence-row";
 
+    const isOut = tx.direction === "outbound";
+    const dirClass = isOut ? "ev-dir out" : "ev-dir in";
+    const dirText  = isOut ? "OUT" : "IN";
+
     const left = document.createElement("div");
     left.className = "ev-left";
-    left.appendChild(document.createTextNode(dirBadge[tx.direction] || tx.direction));
-    left.appendChild(document.createTextNode(" " + escapeHtml(tx.counterparty_label)));
+    left.innerHTML = `<span class="${dirClass}">${dirText}</span>` +
+      `<span class="ev-label" title="${escapeHtml(tx.counterparty_label || tx.counterparty || '')}">` +
+      `${escapeHtml(tx.counterparty_label || tx.counterparty || '—')}</span>`;
 
     const right = document.createElement("div");
     right.className = "ev-right";
     const val = document.createElement("span");
     val.className = "ev-value";
-    val.appendChild(document.createTextNode(tx.value_eth + " ETH"));
+    val.appendChild(document.createTextNode(
+      (tx.value_eth != null ? parseFloat(tx.value_eth).toFixed(6) : "0.000000") + " ETH"
+    ));
     right.appendChild(val);
     const ts = document.createElement("span");
     ts.className = "ev-ts";
-    ts.appendChild(document.createTextNode(tx.timestamp.replace("T", " ").replace("Z", "")));
+    let tsStr = tx.timestamp || "";
+    tsStr = tsStr.replace("T", " ").replace("Z", "").replace("+00:00", "");
+    ts.appendChild(document.createTextNode(tsStr));
     right.appendChild(ts);
 
     row.appendChild(left);
@@ -406,6 +410,30 @@ function renderGraph(result) {
   const risk = result.risk || {};
   const riskLvl = risk.risk_level || "LOW";
 
+  // Legend items
+  const LEGEND = [
+    { label: "Target (Root)",   color: "#4f8cff", shape: "star" },
+    { label: "VASP / Exchange", color: "#22c55e", shape: "diamond" },
+    { label: "Hot Wallet",      color: "#f59e0b", shape: "triangle" },
+    { label: "Deposit Wallet",  color: "#3b82f6", shape: "database" },
+    { label: "Mixer",           color: "#ef4444", shape: "hexagon" },
+    { label: "Ransomware",      color: "#ef4444", shape: "hexagon" },
+    { label: "Sanctioned",      color: "#ef4444", shape: "hexagon" },
+    { label: "Darknet Market",  color: "#a78bfa", shape: "hexagon" },
+    { label: "DeFi Bridge",     color: "#f97316", shape: "triangle" },
+    { label: "Cross-Chain Swap",color: "#c4b5fd", shape: "diamond" },
+    { label: "Fraud",           color: "#f97316", shape: "triangle" },
+    { label: "Unknown",         color: "#64748b", shape: "dot" },
+  ];
+
+  // Build legend HTML
+  const legendEl = document.getElementById("graphLegend");
+  if (legendEl) {
+    legendEl.innerHTML = LEGEND.map(l =>
+      `<span class="legend-item"><span class="legend-dot" style="background:${l.color};"></span>${l.label}</span>`
+    ).join("");
+  }
+
   const NODE_COLORS = {
     is_root:      "#4f8cff",
     exchange:     "#22c55e",
@@ -418,55 +446,136 @@ function renderGraph(result) {
     cross_chain_swap: "#c4b5fd",
     deposit_wallet: "#3b82f6",
     fraud:        "#f97316",
-    unknown_wallet: "#334059",
+    unknown_wallet: "#64748b",
   };
 
-  const nodes = (result.nodes || []).map(n => ({
-    id:    n.id,
-    label: n.is_root ? "🎯 TARGET" : (n.label || n.id.substring(0,8)),
-    color: n.is_root
-      ? "#4f8cff"
-      : (NODE_COLORS[n.wallet_type] || (n.is_known_vasp ? "#22c55e" : "#334059")),
-    font:  { color: "#e2e8f0", size: 10 },
-    shape: n.is_root
-      ? "star"
-      : (n.is_known_vasp ? "diamond" : (n.wallet_type === "mixer" ? "hexagon" : "dot")),
-    size:  n.is_root ? 24 : (n.is_known_vasp ? 18 : 10),
-    title: `${n.label || n.id}<br>Type: ${n.wallet_type || "unknown"}<br>${n.is_known_vasp ? "✅ Known VASP" : ""}`,
-    borderWidth: n.is_root ? 3 : 1,
-    borderWidthSelected: 4,
-  }));
+  const NODE_SHAPES = {
+    is_root:         "star",
+    exchange:        "diamond",
+    hot_wallet:      "triangle",
+    mixer:           "hexagon",
+    ransomware:      "hexagon",
+    darknet:         "hexagon",
+    sanctioned:      "hexagon",
+    defi_bridge:     "triangle",
+    cross_chain_swap:"diamond",
+    deposit_wallet:  "database",
+    fraud:           "triangle",
+    unknown_wallet:  "dot",
+  };
 
+  // Build nodes — label with readable names
+  const nodes = (result.nodes || []).map(n => {
+    const wType = n.wallet_type || "unknown_wallet";
+    const label = n.is_root
+      ? "🎯 TARGET"
+      : (n.is_known_vasp ? (n.vasp_name || n.label || n.id.substring(0,8)) : (n.label || wType.replace(/_/g, " ") || n.id.substring(0,8)));
+    const color  = n.is_root ? "#4f8cff" : (NODE_COLORS[wType] || (n.is_known_vasp ? "#22c55e" : "#64748b"));
+    const shape  = n.is_root ? "star" : (NODE_SHAPES[wType] || (n.is_known_vasp ? "diamond" : "dot"));
+    const size   = n.is_root ? 28 : (n.is_known_vasp ? 20 : 12);
+    const tooltip = `<b>${label}</b><br>` +
+      `Type: ${wType.replace(/_/g, " ")}<br>` +
+      `${n.is_known_vasp ? "✅ Known VASP: " + (n.vasp_name || "") + "<br>" : ""}` +
+      `Address: ${n.id}<br>` +
+      `Risk: ${riskLvl}`;
+
+    return {
+      id:    n.id,
+      label: label,
+      color: color,
+      shape: shape,
+      size:  size,
+      font:  { color: "#e2e8f0", size: n.is_root ? 12 : 10, face: "Inter, sans-serif" },
+      title: tooltip,
+      borderWidth: n.is_root ? 4 : 2,
+      borderWidthSelected: 6,
+    };
+  });
+
+  // Build edges — only keep edges where both endpoints exist
+  const nodeIds = new Set(nodes.map(n => n.id));
   const edgeSet = new Set();
   const edges = [];
   (result.edges || []).forEach(e => {
+    if (!nodeIds.has(e.source) || !nodeIds.has(e.target)) return;
     const key = `${e.source}->${e.target}`;
     if (edgeSet.has(key)) return;
     edgeSet.add(key);
+    const hasValue = e.value_eth > 0.001;
     edges.push({
       from:   e.source,
       to:     e.target,
-      arrows: "to",
-      color:  { color: "#1e2d45", highlight: "#3b82f6" },
-      label:  e.value_eth > 0.001 ? `${e.value_eth.toFixed(4)}` : "",
-      font:   { size: 8, color: "#64748b", strokeWidth: 0 },
+      arrows: { to: { enabled: true, scaleFactor: 0.6 }},
+      color:  { color: hasValue ? "#3b82f6" : "#1e2d45", highlight: "#60a5fa", hover: "#3b82f6" },
+      width:  hasValue ? 2 : 1,
+      label:  hasValue ? `${e.value_eth.toFixed(4)} ETH` : "",
+      font:   { size: 8, color: "#94a3b8", strokeWidth: 0, face: "JetBrains Mono, monospace" },
+      smooth: { type: "continuous" },
     });
   });
 
-  const data    = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+  if (network) network.destroy();
+
+  const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+
   const options = {
     physics: {
-      stabilization: { iterations: 150 },
-      barnesHut: { gravitationalConstant: -4000, springLength: 80 },
+      stabilization: { iterations: 200, fit: true },
+      barnesHut: { gravitationalConstant: -3500, springLength: 100, springConstant: 0.04 },
     },
-    interaction: { hover: true, tooltipDelay: 100 },
+    interaction: {
+      hover: true,
+      tooltipDelay: 80,
+      navigationButtons: false,
+      keyboard: { enabled: true },
+      multiselect: true,
+    },
     layout: { improvedLayout: true },
+    edges: { selectionWidth: 3 },
   };
 
-  if (network) network.destroy();
-  network = new vis.Network(
-    document.getElementById("graphContainer"), data, options
-  );
+  network = new vis.Network(container, data, options);
+
+  // Click-to-highlight: highlight the clicked node and its neighbors
+  network.on("click", function(params) {
+    if (params.nodes.length === 0) {
+      data.nodes.update(nodes.map(n => ({ id: n.id, opacity: 1.0 })));
+      data.edges.update(edges.map(e => ({ id: `${e.from}->${e.to}`, width: e.width || 1, color: { color: "#1e2d45", highlight: "#3b82f6" } })));
+      return;
+    }
+    const clickedId = params.nodes[0];
+    // Find all neighbors
+    const connected = network.getConnectedNodes(clickedId);
+    const connectedSet = new Set(connected);
+    connectedSet.add(clickedId);
+
+    // Dim everything else
+    data.nodes.update(nodes.map(n => ({
+      id: n.id,
+      opacity: connectedSet.has(n.id) ? 1.0 : 0.15,
+      hidden: !connectedSet.has(n.id),
+    })));
+
+    data.edges.update(edges.map(e => {
+      const isConnected = (e.from === clickedId || e.to === clickedId);
+      return {
+        id: `${e.from}->${e.to}`,
+        hidden: !isConnected,
+        width: isConnected ? 3 : 1,
+        color: isConnected ? { color: "#60a5fa", highlight: "#93c5fd" } : { color: "#1e2d45" },
+      };
+    }));
+  });
+
+  network.on("deselectNode", function() {
+    data.nodes.update(nodes.map(n => ({ id: n.id, opacity: 1.0, hidden: false })));
+    data.edges.update(edges.map(e => ({
+      id: `${e.from}->${e.to}`,
+      hidden: false,
+      width: (e.value_eth > 0.001 ? 2 : 1),
+      color: { color: (e.value_eth > 0.001 ? "#3b82f6" : "#1e2d45"), highlight: "#60a5fa" },
+    })));
+  });
 }
 
 // ═══════════════════════════════ HISTORY ═══════════════════════════════
