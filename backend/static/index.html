@@ -143,9 +143,6 @@
           <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;margin-left:auto;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2);padding:6px 10px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border);">
-              <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()" />
-              <span>🎬 Demo mode (synthetic data)</span>
-            </label>
           </label>
         </div>
         <p class="hint">Traces the wallet's transaction graph outward across the selected chain, scores its risk level, and identifies the nearest VASP/exchange for SAHYOG routing.</p>
@@ -188,6 +185,39 @@
 
         <!-- Risk score breakdown -->
         <div id="scoreCardsContainer"></div>
+
+        <!-- Scoring Methodology -->
+        <div class="card" style="border-color:var(--accent);">
+          <h3 class="card-title">📐 Scoring Methodology</h3>
+          <p style="font-size:12px;color:var(--text2);margin:0 0 12px 0;">
+            The risk score (0–100) is a <b>transparent, auditable formula</b> — not a black-box ML model.
+            Each signal is weighted by severity, then combined with a multi-signal boost.
+          </p>
+          <div style="background:var(--surface-2);border-radius:8px;padding:12px;font-family:monospace;font-size:13px;line-height:1.8;overflow-x:auto;">
+            <span style="color:#a78bfa;">final_score</span> = <span style="color:#60a5fa;">Σ</span>(signal_score × signal_weight) + boost<br/>
+            <br/>
+            <span style="color:#60a5fa;">where:</span><br/>
+            &nbsp;&nbsp;boost = <span style="color:#fbbf24;">min(20, (n_signals − 1) × 5)</span>  &nbsp;// more signals = higher confidence<br/>
+            &nbsp;&nbsp;clamped to <span style="color:#34d399;">[0, 100]</span><br/>
+            <br/>
+            <span style="color:#60a5fa;">Signal weights (severity):</span><br/>
+            &nbsp;&nbsp;self_is_high_risk  = <span style="color:#f87171;">1.00</span>  &nbsp;(wallet in known flagged registry)<br/>
+            &nbsp;&nbsp;sanctions_link     = <span style="color:#f87171;">0.95</span>  &nbsp;(tx with OFAC-sanctioned address)<br/>
+            &nbsp;&nbsp;ransomware_link    = <span style="color:#f87171;">0.90</span>  &nbsp;(tx with known ransomware address)<br/>
+            &nbsp;&nbsp;darknet_link       = <span style="color:#fb923c;">0.85</span>  &nbsp;(tx with darknet marketplace)<br/>
+            &nbsp;&nbsp;fraud_link         = <span style="color:#fb923c;">0.70</span>  &nbsp;(tx with fraud-linked address)<br/>
+            &nbsp;&nbsp;mixer_interaction  = <span style="color:#fbbf24;">0.75</span>  &nbsp;(funds to/from mixer/tumbler)<br/>
+            &nbsp;&nbsp;structuring        = <span style="color:#fbbf24;">0.50</span>  &nbsp;(many near-identical tx values)<br/>
+            &nbsp;&nbsp;peel_chain         = <span style="color:#a3e635;">0.40</span>  &nbsp;(linear single-hop chain)<br/>
+            &nbsp;&nbsp;cross_chain_bridge = <span style="color:#a3e635;">0.30</span>  &nbsp;(bridge/swap contract interaction)<br/>
+            &nbsp;&nbsp;high_velocity      = <span style="color:#a3e635;">0.25</span>  &nbsp;(abnormally high tx rate)<br/>
+            <br/>
+            <span style="color:#60a5fa;">Risk thresholds:</span><br/>
+            &nbsp;&nbsp;HIGH  = score ≥ <span style="color:#f87171;">60</span><br/>
+            &nbsp;&nbsp;MEDIUM = score ≥ <span style="color:#fbbf24;">25</span><br/>
+            &nbsp;&nbsp;LOW   = score &lt; 25
+          </div>
+        </div>
 
         <!-- Evidence (full-width) -->
         <div class="card" style="margin-bottom:16px;">

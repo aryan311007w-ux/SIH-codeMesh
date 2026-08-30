@@ -310,6 +310,59 @@ def build_pdf_report(trace_result: dict) -> io.BytesIO:
         ))
     story.append(Spacer(1, 0.5*cm))
 
+    # ── Scoring Methodology ──────────────────────────────────────────────────────────────────────
+    story.append(Paragraph("SCORING METHODOLOGY", section_style))
+    story.append(Paragraph(
+        "The risk score (0-100) is a transparent, auditable formula. " +
+        "Each detected signal is weighted by severity, then combined with a multi-signal boost.",
+        small_style
+    ))
+    story.append(Spacer(1, 0.3*cm))
+
+    formula_style = ParagraphStyle(
+        "formula", parent=body_style,
+        fontName="Courier", fontSize=9, leading=14,
+        backColor="#f5f3ff", borderPadding=8,
+        leftIndent=0.5*cm, rightIndent=0.5*cm,
+    )
+    story.append(Paragraph(
+        "final_score = sum(signal_score * signal_weight) + boost",
+        formula_style
+    ))
+    story.append(Spacer(1, 0.15*cm))
+    story.append(Paragraph(
+        "boost = min(20, (n_signals - 1) * 5)  |  clamped to [0, 100]",
+        formula_style
+    ))
+    story.append(Spacer(1, 0.4*cm))
+
+    story.append(Paragraph("<b>Signal Weights (Severity)</b>", small_style))
+    sig_table = [
+        ["Signal", "Weight", "Trigger Condition"],
+        ["self_is_high_risk",   "1.00", "Wallet in known flagged registry"],
+        ["sanctions_link",      "0.95", "Direct tx with OFAC-sanctioned address"],
+        ["ransomware_link",     "0.90", "Transaction with known ransomware address"],
+        ["darknet_link",        "0.85", "Transaction with darknet marketplace"],
+        ["fraud_link",          "0.70", "Transaction with fraud-linked address"],
+        ["mixer_interaction",   "0.75", "Funds sent to/received from mixer/tumbler"],
+        ["structuring",         "0.50", "Many near-identical tx values (layering)"],
+        ["peel_chain",          "0.40", "Linear single-hop chain"],
+        ["cross_chain_bridge",  "0.30", "Interaction with bridge/swap contract"],
+        ["high_velocity",       "0.25", "Abnormally high transaction rate"],
+    ]
+    story.append(_table(sig_table, col_widths=[3.5*cm, 2*cm, 10.5*cm]))
+    story.append(Spacer(1, 0.3*cm))
+
+    story.append(Paragraph("<b>Risk Thresholds</b>", small_style))
+    thresh_table = [
+        ["Level", "Score Range"],
+        ["HIGH",   "score >= 60"],
+        ["MEDIUM", "score >= 25"],
+        ["LOW",    "score < 25"],
+    ]
+    story.append(_table(thresh_table, col_widths=[3*cm, 4*cm]))
+    story.append(Spacer(1, 0.5*cm))
+
     # ── Wallet Classification ─────────────────────────────────────────────
     story.append(Paragraph("WALLET CLASSIFICATION", section_style))
     classification = trace_result.get("wallet_classification", {})

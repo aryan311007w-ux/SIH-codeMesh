@@ -28,9 +28,7 @@ const WALLET_TYPE_ICONS = {
 
 // ═══════════════════════════════ STARTUP ═══════════════════════════════
 (async function init() {
-  // Default to demo mode so prototype always works out of the box
-  document.getElementById("demoModeToggle").checked = true;
-  await checkHealth();
+await checkHealth();
   await loadDashboardStats();
   await loadHistory();
   await loadAlerts();
@@ -194,7 +192,6 @@ async function runTrace() {
 
   document.getElementById("traceBtn").disabled = true;
   document.getElementById("resultsArea").classList.add("hidden");
-  document.getElementById("demoNotice")?.classList.add("hidden");
   setStatus(
     '<div class="spinner"></div> Tracing transaction graph across the blockchain… This may take a few seconds.',
     "loading"
