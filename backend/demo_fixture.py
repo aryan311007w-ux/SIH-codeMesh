@@ -74,11 +74,12 @@ def demo_trace_result(wallet: str = _ROOT, chain: str = "ethereum") -> dict:
     sahyog = {
         "vasp_name":       "Binance Hot Wallet",
         "vasp_address":    _VASP,
-        "action":          "Voluntary disclosure inquiry to Binance Hot Wallet",
+        "action":          f"URGENT: Freeze request recommended to Binance Hot Wallet",
         "disclosure_note": (
-            "Low-risk wallet. Traced wallet interacts with Binance Hot Wallet "
+            f"High-risk wallet with typologies: Layering via Mixer, Proximity to Sanctioned Entity. "
+            f"Traced wallet interacts with Binance Hot Wallet "
             f"(confidence: {_confidence}%, relationship: interacts_with). "
-            "Standard disclosure inquiry via SAHYOG may be appropriate."
+            f"Initiate immediate freeze/disclosure request via SAHYOG."
         ),
     }
 
@@ -92,11 +93,11 @@ def demo_trace_result(wallet: str = _ROOT, chain: str = "ethereum") -> dict:
         "matches":                    [{**top_match}],
         "top_match":                  top_match,
         "risk": {
-            "risk_score":  35,
-            "risk_level":  "MEDIUM",
-            "flags":       ["mixer_proximity"],
-            "typologies":  ["Proximity to mixer (Tornado Cash)"],
-            "details":     {"mixer_proximity": 25},
+            "risk_score":  85,
+            "risk_level":  "HIGH",
+            "flags":       ["mixer_interaction", "high_value_flow"],
+            "typologies":  ["Layering via Mixer", "Proximity to Sanctioned Entity"],
+            "details":     {"mixer_interaction": 50, "high_value_flow": 35},
         },
         "wallet_classification": {
             "type":   "hot_wallet",

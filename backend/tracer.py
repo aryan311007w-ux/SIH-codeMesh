@@ -145,6 +145,11 @@ class WalletTracer:
             if hops >= hops_limit:
                 continue
 
+            # Early stop: if we have VASP matches, only expand nodes that
+            # are on a shorter path than the closest match
+            if raw_matches and hops >= min(o['hops'] for obs in raw_matches.values() for o in obs):
+                continue
+
             try:
                 txs = self.client.get_transactions(
                     current, chain=chain, max_results=self.max_tx_per_wallet
