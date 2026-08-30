@@ -42,6 +42,7 @@ ETHERSCAN_API_KEY  = os.getenv("ETHERSCAN_API_KEY",  "")
 TRONGRID_API_KEY   = os.getenv("TRONGRID_API_KEY",   "")
 MAX_HOPS           = int(os.getenv("MAX_HOPS",           "3"))
 MAX_TX_PER_WALLET  = int(os.getenv("MAX_TX_PER_WALLET",  "200"))
+MAX_NODES_TO_EXPAND = int(os.getenv("MAX_NODES_TO_EXPAND", "20"))
 
 # ---------------------------------------------------------------------------
 # Silent Probe Middleware
@@ -133,6 +134,7 @@ tracer = WalletTracer(
     known_vasps       = KNOWN_VASPS,
     max_hops          = MAX_HOPS,
     max_tx_per_wallet = MAX_TX_PER_WALLET,
+    max_nodes_to_expand = MAX_NODES_TO_EXPAND,
 )
 
 CASE_HISTORY:      list = []

@@ -90,7 +90,7 @@ def _request_with_retry(method, url, retries=_DEFAULT_RETRIES, backoff=_DEFAULT_
 # ---------------------------------------------------------------------------
 
 class EVMAdapter:
-    def __init__(self, api_key: str, chain_id: int, request_delay: float = 0.22):
+    def __init__(self, api_key: str, chain_id: int, request_delay: float = 0.15):
         self.api_key       = api_key
         self.chain_id      = chain_id
         self.request_delay = request_delay
@@ -186,7 +186,7 @@ class EVMAdapter:
 # ---------------------------------------------------------------------------
 
 class TronAdapter:
-    def __init__(self, api_key: str = "", request_delay: float = 0.30):
+    def __init__(self, api_key: str = "", request_delay: float = 0.20):
         self.api_key       = api_key
         self.request_delay = request_delay
 

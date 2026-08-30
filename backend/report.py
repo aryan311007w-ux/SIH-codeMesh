@@ -178,14 +178,14 @@ def build_pdf_report(trace_result: dict) -> io.BytesIO:
         sig_data = [["Signal", "Raw Score", "Weight", "Contribution", "Detection Reason"]]
         total_c = 0
         for sig in flags:
-            raw = details.get(sig, 0)
-            w   = SIG_W.get(sig, 0.5)
-            c   = round(raw * w)
+            raw = float(details.get(sig, 0) or 0)
+            w = float(SIG_W.get(sig, 0.5))
+            c = round(raw * w)
             total_c += c
             label = SIG_LABEL.get(sig, sig)
+            reason = "Direct link" if w >= 0.5 else "Behavioral"
             sig_data.append([
-                label, str(raw), f"{int(w*100)}%", f"+{c}",
-                SIG_W.get(sig, "0.5") > 0.5 and "Direct link" or "Behavioral"
+                label, str(raw), f"{int(w * 100)}%", f"+{c}", reason
             ])
         boost = min(20, (len(flags) - 1) * 5)
         sig_data.append(["", "", "", f"<b>Sum: {total_c} + Boost: +{boost}</b>", ""])

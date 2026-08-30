@@ -101,7 +101,7 @@ class WalletTracer:
         known_vasps:          Dict[str, str],
         max_hops:             int = 3,
         max_tx_per_wallet:    int = 200,
-        max_nodes_to_expand:  int = 60,
+        max_nodes_to_expand:  int = 20,
     ):
         self.client              = client
         self.known_vasps         = known_vasps

@@ -31,6 +31,7 @@
   --radius-sm:   6px;
   --shadow:      0 4px 24px rgba(0,0,0,0.4);
   --shadow-sm:   0 2px 8px rgba(0,0,0,0.3);
+  --surface-2:   var(--panel2);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
