@@ -416,6 +416,25 @@ class WalletTracer:
     def _build_sahyog_routing(self, matches: List[dict], risk: dict) -> dict:
         """Build a SAHYOG portal routing recommendation."""
         if not matches:
+            risk_level = risk.get("risk_level", "LOW")
+            typologies = risk.get("typologies", [])
+            wtype      = risk.get("wallet_type", "unknown_wallet")
+            if isinstance(wtype, dict):
+                wtype = wtype.get("type", "unknown_wallet")
+
+            if risk_level == "HIGH":
+                return {
+                    "vasp_name":       "Manual Review Required",
+                    "vasp_address":    None,
+                    "action":          "URGENT: Direct law enforcement escalation required — no VASP identified but wallet is HIGH risk",
+                    "disclosure_note": (
+                        f"High-risk wallet classified as {wtype.replace('_', ' ')}. "
+                        f"Typologies: {', '.join(typologies)}. "
+                        f"No VASP match found within hop limit, but risk signals warrant immediate "
+                        f"SAHYOG escalation for manual review and potential freeze/disclosure."
+                    ),
+                }
+
             return {
                 "vasp_name":       None,
                 "vasp_address":    None,
