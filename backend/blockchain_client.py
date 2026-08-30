@@ -102,6 +102,7 @@ class EVMAdapter:
     @lru_cache(maxsize=2048)
     def _fetch(self, wallet: str, max_results: int,
                include_internal: bool) -> List[dict]:
+        time.sleep(self.request_delay)  # one rate-limit pause per wallet (both requests share it)
         # Step 1: normal external transactions
         params = {
             "chainid":    self.chain_id,
@@ -138,7 +139,6 @@ class EVMAdapter:
 
         # Step 2: also fetch internal (contract call) transactions
         if include_internal:
-            time.sleep(self.request_delay)
             params["action"] = "txlistinternal"
             try:
                 resp2 = _request_with_retry(

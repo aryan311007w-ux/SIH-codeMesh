@@ -242,13 +242,19 @@ def trace_wallet(
             detail=f"Invalid {SUPPORTED_CHAINS[chain]['name']} address format."
         )
 
-    if SUPPORTED_CHAINS[chain]["type"] == "evm" and not ETHERSCAN_API_KEY:
+    # Auto-fallback to demo mode when the required API key is missing
+    chain_type = SUPPORTED_CHAINS[chain]["type"]
+    needs_key  = chain_type in ("evm", "tron")
+    has_key    = (ETHERSCAN_API_KEY if chain_type == "evm"
+                  else TRONGRID_API_KEY if chain_type == "tron"
+                  else True)
+    if needs_key and not has_key:
         # Auto-fallback to demo mode so the UI is never blank
         demo_result = demo_trace_result(wallet=wallet, chain=chain)
         demo_result["timestamp"] = datetime.now(timezone.utc).isoformat()
         demo_result["_demo_mode"] = True
         demo_result["_warning"] = (
-            "Live blockchain API not configured (ETHERSCAN_API_KEY missing). "
+            "Live blockchain API not configured. "
             "Returning synthetic demo data. Add the API key to .env for live tracing."
         )
         CASE_HISTORY.append(demo_result)

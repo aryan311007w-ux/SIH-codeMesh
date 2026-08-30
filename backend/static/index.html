@@ -180,7 +180,14 @@
           </div>
         </div>
 
-        <!-- VASP matches + graph -->
+        <!-- Evidence (full-width) -->
+        <div class="card" style="margin-bottom:16px;">
+          <h3 class="card-title">📎 Evidence</h3>
+          <p class="muted small" style="margin-bottom:10px;">Transactions connecting the traced wallet to VASP candidates.</p>
+          <div id="evidenceList"></div>
+        </div>
+
+        <!-- VASP matches + graph (side by side) -->
         <div class="results-grid">
           <div class="card">
             <h3 class="card-title">🏦 VASP Attribution</h3>
@@ -188,19 +195,12 @@
             <button id="reportBtn" class="btn-secondary hidden" onclick="downloadReport()">📄 Download PDF Report</button>
           </div>
           <div class="card">
-            <h3 class="card-title">📎 Evidence</h3>
-            <p class="muted small" style="margin-bottom:10px;">Transactions connecting the traced wallet to VASP candidates. Demo data is synthetic — labeled below.</p>
-            <div id="evidenceList"></div>
+            <div class="graph-header-row">
+              <h3 class="card-title" style="margin-bottom:0;">🕸️ Transaction Graph</h3>
+              <div id="graphLegend" class="graph-legend"></div>
+            </div>
+            <div id="graphContainer"></div>
           </div>
-        </div>
-
-        <!-- Transaction graph (full-width) -->
-        <div class="card graph-card" style="margin-top:16px;">
-          <div class="graph-header-row">
-            <h3 class="card-title" style="margin-bottom:0;">🕸️ Transaction Graph</h3>
-            <div id="graphLegend" class="graph-legend"></div>
-          </div>
-          <div id="graphContainer"></div>
         </div>
 
       </div>

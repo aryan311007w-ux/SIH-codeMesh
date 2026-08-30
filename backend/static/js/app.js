@@ -226,9 +226,9 @@ function renderResults(result) {
   renderRiskBanner(result);
   renderClassification(result);
   renderSahyogRouting(result);
-  renderMatches(result);
-  renderEvidence(result);
-  renderGraph(result);
+  renderEvidence(result);   // evidence first (full width)
+  renderMatches(result);    // VASP attribution (half width)
+  renderGraph(result);      // graph (half width)
 }
 
 function renderRiskBanner(result) {
