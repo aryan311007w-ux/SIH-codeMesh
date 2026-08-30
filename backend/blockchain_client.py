@@ -95,11 +95,14 @@ class EVMAdapter:
         self.chain_id      = chain_id
         self.request_delay = request_delay
 
-    def get_transactions(self, wallet: str, max_results: int = 200) -> List[dict]:
-        return self._fetch(wallet.lower(), max_results)
+    def get_transactions(self, wallet: str, max_results: int = 200,
+                         include_internal: bool = True) -> List[dict]:
+        return self._fetch(wallet.lower(), max_results, include_internal)
 
     @lru_cache(maxsize=2048)
-    def _fetch(self, wallet: str, max_results: int) -> List[dict]:
+    def _fetch(self, wallet: str, max_results: int,
+               include_internal: bool) -> List[dict]:
+        # Step 1: normal external transactions
         params = {
             "chainid":    self.chain_id,
             "module":     "account",
@@ -127,10 +130,44 @@ class EVMAdapter:
         result  = data.get("result", "")
 
         if status == "1":
-            return [self._normalize(tx) for tx in result]
-        if "No transactions found" in message or result == [] or result == "":
-            return []
-        raise BlockchainClientError(f"Etherscan error for {wallet}: {message} — {result}")
+            txs = [self._normalize(tx) for tx in result]
+        elif "No transactions found" in message or result == [] or result == "":
+            txs = []
+        else:
+            raise BlockchainClientError(f"Etherscan error for {wallet}: {message} — {result}")
+
+        # Step 2: also fetch internal (contract call) transactions
+        if include_internal:
+            time.sleep(self.request_delay)
+            params["action"] = "txlistinternal"
+            try:
+                resp2 = _request_with_retry(
+                    "GET", ETHERSCAN_V2_URL, params=params, timeout=15
+                )
+                resp2.raise_for_status()
+            except BlockchainClientError:
+                raise
+            except requests.RequestException as e:
+                raise BlockchainClientError(
+                    f"EVM internal tx request failed for {wallet}: {e}"
+                )
+
+            data2    = resp2.json()
+            status2  = data2.get("status")
+            message2 = data2.get("message", "")
+            result2  = data2.get("result", "")
+
+            if status2 == "1" and isinstance(result2, list):
+                internal_txs = [self._normalize(tx) for tx in result2]
+                # Merge and deduplicate by tx hash
+                seen = {t["hash"] for t in txs}
+                for itx in internal_txs:
+                    if itx["hash"] not in seen:
+                        txs.append(itx)
+                        seen.add(itx["hash"])
+                txs.sort(key=lambda t: t.get("timeStamp", "0"), reverse=True)
+
+        return txs
 
     @staticmethod
     def _normalize(tx: dict) -> dict:
@@ -294,9 +331,17 @@ class BlockchainClient:
         return adapter
 
     def get_transactions(self, wallet: str, chain: str = "ethereum",
-                         max_results: int = 200) -> List[dict]:
+                         max_results: int = 200,
+                         include_internal: bool = True) -> List[dict]:
         """
         Fetch and return normalized transactions for `wallet` on `chain`.
+
+        For EVM chains, also fetches internal (contract call) transactions
+        and merges them with normal transactions (deduplicated by tx hash).
         """
         adapter = self._get_adapter(chain)
-        return adapter.get_transactions(wallet, max_results)
+        kwargs = {}
+        meta = SUPPORTED_CHAINS.get(chain)
+        if meta and meta.get("type") == "evm":
+            kwargs["include_internal"] = include_internal
+        return adapter.get_transactions(wallet, max_results, **kwargs)

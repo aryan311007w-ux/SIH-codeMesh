@@ -10,7 +10,7 @@ from tracer             import WalletTracer
 from risk_engine        import score_wallet
 from wallet_classifier  import classify_wallet
 from chains             import validate_address, SUPPORTED_CHAINS
-from blockchain_client  import BlockchainClient
+from blockchain_client  import BlockchainClient, BlockchainClientError
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +199,123 @@ def test_app_loads():
 
 
 # ---------------------------------------------------------------------------
+# Test 8: Empty wallet (no transactions)
+# ---------------------------------------------------------------------------
+
+def test_empty_wallet():
+    """A wallet with zero transactions should return sensible defaults."""
+    class EmptyClient:
+        def get_transactions(self, wallet, chain="ethereum", max_results=200):
+            return []
+
+    empty_tracer = WalletTracer(client=EmptyClient(), known_vasps=KNOWN_VASPS, max_hops=2)
+    result = empty_tracer.trace(fake_client.ROOT, chain="ethereum")
+
+    assert result["total_transactions_scanned"] == 0, \
+        f"Expected 0 txs for empty wallet, got {result['total_transactions_scanned']}"
+    assert result["matches"] == [], "Expected no VASP matches for empty wallet"
+    assert result["risk"]["risk_level"] == "LOW", \
+        f"Expected LOW risk for empty wallet, got {result['risk']['risk_level']}"
+    assert result["wallet_classification"]["type"] == "unknown_wallet", \
+        f"Expected unknown_wallet classification, got {result['wallet_classification']['type']}"
+    print(f"[PASS] Test 8: Empty wallet -- risk=LOW, no matches, classification=unknown_wallet")
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Invalid address validation
+# ---------------------------------------------------------------------------
+
+def test_invalid_addresses():
+    """Various invalid addresses should be rejected by validation."""
+    # Too short / missing 0x
+    assert not validate_address("0x", "ethereum"), "Too-short address should fail"
+    assert not validate_address("0x123", "ethereum"), "Short address should fail"
+    # Missing 0x prefix
+    assert not validate_address(
+        "d8dA6BF26964aF9D7eed9e03E53415D37aA96045", "ethereum"
+    ), "Address without 0x prefix should fail"
+    # Wrong chain prefix
+    assert not validate_address("TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7", "ethereum"), \
+        "Tron address should fail Ethereum validation"
+    assert not validate_address("0xd8dA6BF26964aF9D7eed9e03E53415D37aA96045", "tron"), \
+        "ETH address should fail Tron validation"
+    # Valid addresses should pass
+    assert validate_address("0xd8dA6BF26964aF9D7eed9e03E53415D37aA96045", "ethereum"), \
+        "Valid ETH address should pass"
+    assert validate_address("TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7", "tron"), \
+        "Valid Tron address should pass"
+    print(f"[PASS] Test 9: Invalid address validation -- all edge cases handled")
+
+
+# ---------------------------------------------------------------------------
+# Test 10: API failure handling (client error propagation)
+# ---------------------------------------------------------------------------
+
+def test_api_failure_handling():
+    """Tracer should gracefully skip wallets that fail to fetch."""
+
+    class FlakyClient:
+        call_count = 0
+
+        def get_transactions(self, wallet, chain="ethereum", max_results=200):
+            FlakyClient.call_count += 1
+            if FlakyClient.call_count == 1:
+                raise BlockchainClientError("Simulated API failure")
+            return []
+
+    tracer_fail = WalletTracer(client=FlakyClient(), known_vasps=KNOWN_VASPS, max_hops=2)
+
+    # The tracer catches BlockchainClientError and continues
+    result = tracer_fail.trace(fake_client.ROOT, chain="ethereum")
+    assert "wallet" in result, "Trace should complete despite API failure"
+    assert result["wallet"] == fake_client.ROOT, "Root wallet should be preserved"
+    print(f"[PASS] Test 10: API failure handling -- trace continues after client error")
+
+
+# ---------------------------------------------------------------------------
+# Test 11: Evidence section present in trace results
+# ---------------------------------------------------------------------------
+
+def test_evidence_section():
+    """Trace result should include an evidence list with transaction details."""
+    result = tracer.trace(fake_client.ROOT, chain="ethereum")
+    assert "evidence" in result, "Missing evidence field in trace result"
+    evidence = result["evidence"]
+    assert isinstance(evidence, list), "Evidence should be a list"
+    assert len(evidence) > 0, "Expected evidence entries for wallet with transactions"
+
+    entry = evidence[0]
+    assert "tx_hash" in entry, "Evidence entry missing tx_hash"
+    assert "direction" in entry, "Evidence entry missing direction"
+    assert "counterparty" in entry, "Evidence entry missing counterparty"
+    assert "value_eth" in entry, "Evidence entry missing value_eth"
+    assert "timestamp" in entry, "Evidence entry missing timestamp"
+    assert entry["direction"] in ("inbound", "outbound"), \
+        f"Invalid direction: {entry['direction']}"
+    print(f"[PASS] Test 11: Evidence section -- {len(evidence)} entries with correct fields")
+
+
+# ---------------------------------------------------------------------------
+# Test 12: Demo trace endpoint (if demo_fixture available)
+# ---------------------------------------------------------------------------
+
+def test_demo_trace_endpoint():
+    """Demo trace should return deterministic results with a VASP match."""
+    try:
+        from demo_fixture import demo_trace_result
+    except ImportError:
+        print("[SKIP] Test 12: demo_fixture not available")
+        return
+
+    data = demo_trace_result()
+    assert "matches" in data, "Demo trace missing matches"
+    assert len(data["matches"]) > 0, "Demo trace expected at least one VASP match"
+    assert data["matches"][0]["vasp_name"] == "Binance Hot Wallet", \
+        f"Expected Binance match, got {data['matches'][0]['vasp_name']}"
+    print(f"[PASS] Test 12: Demo trace -- Binance matched at {data['matches'][0]['confidence']}%")
+
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 
@@ -211,6 +328,11 @@ if __name__ == "__main__":
     test_sahyog_routing()
     test_chain_validation()
     test_app_loads()
+    test_empty_wallet()
+    test_invalid_addresses()
+    test_api_failure_handling()
+    test_evidence_section()
+    test_demo_trace_endpoint()
     print("\n=== ALL TESTS PASSED ===\n")
     # Uncomment to inspect full result:
     # print(json.dumps(result, indent=2, default=str))
