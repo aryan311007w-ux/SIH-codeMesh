@@ -317,9 +317,9 @@ function renderMatches(result) {
     p.className = "muted small";
     p.appendChild(document.createTextNode(result.note || "No known VASP match found."));
     el.appendChild(p);
-    document.getElementById("reportBtn").classList.add("hidden");
-    return;
   }
+  // Always show PDF button — report is useful even without VASP match
+  document.getElementById("reportBtn").classList.remove("hidden");
 
   matches.slice(0, 8).forEach((m, idx) => {
     const conf = m.confidence;
