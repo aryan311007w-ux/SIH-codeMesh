@@ -28,6 +28,8 @@ const WALLET_TYPE_ICONS = {
 
 // ═══════════════════════════════ STARTUP ═══════════════════════════════
 (async function init() {
+  // Default to demo mode so prototype always works out of the box
+  document.getElementById("demoModeToggle").checked = true;
   await checkHealth();
   await loadDashboardStats();
   await loadHistory();

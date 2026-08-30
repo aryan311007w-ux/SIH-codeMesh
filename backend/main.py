@@ -417,7 +417,16 @@ def sahyog_submit(wallet: str = Query(...), chain: str = Query("ethereum")):
 # Static frontend
 # ---------------------------------------------------------------------------
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        if hasattr(resp, "headers"):
+            resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            resp.headers["Pragma"] = "no-cache"
+            resp.headers["Expires"] = "0"
+        return resp
+
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
