@@ -3,302 +3,757 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SAHYOG · Blockchain Intelligence · SIH-26182</title>
-  <meta name="description" content="SIH-26182 Automated Blockchain Intelligence and VASP Attribution Engine for Law Enforcement Agencies — I4C, Ministry of Home Affairs." />
+  <title>CryptoGuard AI · Blockchain Investigation & VASP Attribution</title>
+  <meta name="description" content="AI-Powered Blockchain Investigation and VASP Attribution Platform for Law Enforcement Agencies — SIH 2026 Problem Statement SIH26182." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <!-- vis-network: local copy (no CDN dependency) -->
+  <!-- Local vis-network library -->
   <script src="/static/js/vis-network.min.js"></script>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════ SIDEBAR ═══════ -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-brand">
-    <div class="brand-icon">⚖️</div>
-    <div>
-      <div class="brand-name">SAHYOG Intelligence</div>
-      <div class="brand-sub">SIH-26182 · I4C</div>
+<!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+<header class="header-bar">
+  <div class="brand-section" onclick="navigateTo('dashboard')">
+    <div class="brand-logo-icon">🛡️</div>
+    <div class="brand-text">
+      <h1>CryptoGuard <span class="badge-ai">AI</span></h1>
+      <p>Blockchain Investigation & VASP Attribution</p>
     </div>
   </div>
 
-  <nav class="sidebar-nav">
-    <a class="nav-item active" id="navDashboard" onclick="showPanel('dashboard')">
-      <span class="nav-icon">🏠</span> Dashboard
-    </a>
-    <a class="nav-item" id="navTrace" onclick="showPanel('trace')">
-      <span class="nav-icon">🔍</span> New Investigation
-    </a>
-    <a class="nav-item" id="navHistory" onclick="showPanel('history')">
-      <span class="nav-icon">📋</span> Case History
-    </a>
-    <a class="nav-item" id="navAlerts" onclick="showPanel('alerts')">
-      <span class="nav-icon">🚨</span> Risk Alerts
-      <span class="nav-badge" id="alertsBadge" style="display:none">0</span>
-    </a>
-    <a class="nav-item" id="navVasps" onclick="showPanel('vasps')">
-      <span class="nav-icon">🏦</span> Known VASPs
-    </a>
+  <nav class="top-nav">
+    <button class="nav-link active" id="navDashboard" onclick="navigateTo('dashboard')">
+      <span>📊</span> Dashboard
+    </button>
+    <button class="nav-link" id="navWorkspace" onclick="navigateTo('workspace')">
+      <span>🔍</span> Workspace
+    </button>
+    <button class="nav-link" id="navVasps" onclick="navigateTo('vasps')">
+      <span>🏦</span> VASP Intelligence
+    </button>
+    <button class="nav-link" id="navCybercrime" onclick="openCybercrimeTab()">
+      <span>⚖️</span> Cybercrime Response
+    </button>
+    <button class="nav-link" id="navReports" onclick="navigateTo('reports')">
+      <span>📄</span> Reports
+    </button>
   </nav>
 
-  <div class="sidebar-footer">
-    <div class="health-indicator" id="healthIndicator">
-      <span class="health-dot" id="healthDot"></span>
-      <span id="healthText">Checking…</span>
+  <div class="header-tools">
+    <div class="demo-indicator" id="demoModeIndicator" onclick="toggleDemoMode()">
+      <span class="pulse-dot" id="demoPulseDot"></span>
+      <span id="demoModeText">DEMO MODE</span>
     </div>
+    <button class="btn-primary" onclick="openNewInvestigationModal()">
+      <span>+</span> New Investigation
+    </button>
+    <button class="btn-secondary btn-sm" onclick="toggleCopilot()" title="AI Investigation Copilot">
+      <span>🤖</span> Copilot
+    </button>
   </div>
-</aside>
+</header>
 
-<!-- ═══════════════════════════════════════ MAIN ══════════ -->
-<div class="main-wrapper">
+<!-- ═══════════════════════════════ MAIN CONTENT ═════════════════════════ -->
+<main class="app-container">
 
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="topbar-left">
-      <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
-      <h1 class="topbar-title" id="pageTitle">Dashboard</h1>
-    </div>
-    <div class="topbar-right">
-      <div class="chain-status" id="chainStatus">
-        <span class="status-dot ok"></span> Ethereum Mainnet
-      </div>
-      <div class="case-counter" id="caseCounter">0 Cases</div>
-    </div>
-  </header>
+  <!-- ─── 1. DASHBOARD VIEW ─── -->
+  <section id="viewDashboard">
 
-  <!-- ─── DASHBOARD PANEL ─── -->
-  <section class="panel-page" id="panelDashboard">
-    <div class="stats-grid">
-      <div class="stat-card" id="statCases">
-        <div class="stat-icon">📁</div>
-        <div class="stat-value" id="statCasesVal">0</div>
-        <div class="stat-label">Cases Traced</div>
+    <!-- Investigation Workflow Ribbon -->
+    <div class="workflow-ribbon">
+      <div class="wf-step active">
+        <span class="wf-step-num">1</span> Enter Suspect Wallet
       </div>
-      <div class="stat-card danger" id="statHighRisk">
-        <div class="stat-icon">🚨</div>
-        <div class="stat-value" id="statHighRiskVal">0</div>
-        <div class="stat-label">High-Risk Wallets</div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">2</span> Trace Graph (BFS)
       </div>
-      <div class="stat-card accent" id="statVasps">
-        <div class="stat-icon">🏦</div>
-        <div class="stat-value" id="statVaspsVal">—</div>
-        <div class="stat-label">Known VASPs Loaded</div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">3</span> Behaviour Profile
       </div>
-      <div class="stat-card green" id="statChains">
-        <div class="stat-icon">🔗</div>
-        <div class="stat-value" id="statChainsVal">5</div>
-        <div class="stat-label">Chains Supported</div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">4</span> Identify Intermediaries
+      </div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">5</span> VASP Attribution
+      </div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">6</span> Forensic Risk
+      </div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-step active">
+        <span class="wf-step-num">7</span> Section 91 Requisition
       </div>
     </div>
 
-    <div class="dashboard-grid">
-      <div class="db-card">
-        <h3 class="db-card-title">Quick Investigation</h3>
-        <p class="muted" style="margin-bottom:12px;font-size:13px;">Enter a wallet address and start tracing immediately.</p>
-        <div class="quick-trace-row">
-          <input id="quickWallet" type="text" placeholder="0x... or T... or bc1..." class="input-field" />
-          <button class="btn-primary" onclick="quickTrace()">🔍 Trace</button>
+    <!-- KPI Stats Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card cases-stat">
+        <div>
+          <div class="kpi-val" id="kpiTotalCases">0</div>
+          <div class="kpi-label">Active Investigations</div>
+        </div>
+        <div class="kpi-icon">📁</div>
+      </div>
+      <div class="kpi-card risk-high">
+        <div>
+          <div class="kpi-val" id="kpiHighRisk">0</div>
+          <div class="kpi-label">High-Risk Targets Flagged</div>
+        </div>
+        <div class="kpi-icon">🚨</div>
+      </div>
+      <div class="kpi-card vasp-hit">
+        <div>
+          <div class="kpi-val" id="kpiVaspHits">0</div>
+          <div class="kpi-label">Attributed VASPs</div>
+        </div>
+        <div class="kpi-icon">🏦</div>
+      </div>
+      <div class="kpi-card fiu-stat">
+        <div>
+          <div class="kpi-val" id="kpiFiuCount">8</div>
+          <div class="kpi-label">FIU-IND Registered Entities</div>
+        </div>
+        <div class="kpi-icon">🇮🇳</div>
+      </div>
+      <div class="kpi-card">
+        <div>
+          <div class="kpi-val" id="kpiChains">5</div>
+          <div class="kpi-label">Supported Chains</div>
+        </div>
+        <div class="kpi-icon">🔗</div>
+      </div>
+    </div>
+
+    <!-- Quick Investigation Bar -->
+    <div class="quick-launch-bar">
+      <input type="text" id="quickWalletInput" class="input-field mono" placeholder="Enter target address (0x... or T... or bc1...)" />
+      <select id="quickChainSelect" class="input-field">
+        <option value="ethereum">Ethereum (ETH)</option>
+        <option value="bsc">BNB Chain (BSC)</option>
+        <option value="polygon">Polygon (MATIC)</option>
+        <option value="tron">Tron (TRX)</option>
+        <option value="bitcoin">Bitcoin (BTC)</option>
+      </select>
+      <button class="btn-primary" onclick="launchQuickInvestigation()">
+        <span>🚀</span> Start Investigation
+      </button>
+      <button class="btn-secondary" onclick="loadDemoTarget()">
+        <span>⚡</span> Load Demo Case (NCRP-2026-849102)
+      </button>
+    </div>
+
+    <!-- Dashboard Content Grid -->
+    <div class="db-grid">
+      <!-- Recent Investigations Table -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span>📋</span> Recent Investigations</div>
+          <span class="small muted" id="caseCountBadge">0 cases recorded</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="tableRecentCases">
+            <thead>
+              <tr>
+                <th>Wallet / Target</th>
+                <th>Chain</th>
+                <th>Risk Level</th>
+                <th>Attributed VASP</th>
+                <th>Confidence</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="recentCasesBody">
+              <tr><td colspan="6" class="muted" style="text-align:center;padding:24px;">No investigations recorded yet. Click '+ New Investigation' or 'Load Demo Case' to begin.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="db-card">
-        <h3 class="db-card-title">Recent Alerts</h3>
-        <div id="dashboardAlerts"><p class="muted small">No high-risk alerts yet.</p></div>
-      </div>
-      <div class="db-card">
-        <h3 class="db-card-title">Recent Cases</h3>
-        <div id="dashboardCases"><p class="muted small">No cases traced this session.</p></div>
+
+      <!-- High-Risk Alerts Feed -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span>🚨</span> High-Risk Alerts Feed</div>
+          <span class="small muted">PMLA / Typology Triggers</span>
+        </div>
+        <div id="alertsFeedContainer" style="display:flex;flex-direction:column;gap:10px;">
+          <p class="muted small" style="text-align:center;padding:20px;">No high-risk alerts flagged in this session.</p>
+        </div>
       </div>
     </div>
+
   </section>
 
-  <!-- ─── TRACE PANEL ─── -->
-  <section class="panel-page hidden" id="panelTrace">
-    <div class="trace-container">
+  <!-- ─── 2. INVESTIGATION WORKSPACE VIEW ─── -->
+  <section id="viewWorkspace" class="hidden">
 
-      <!-- Search card -->
-      <div class="card">
-        <h2 class="card-title">🔍 New Wallet Investigation</h2>
-        <div class="form-grid">
-          <div class="form-group" style="flex:2;">
-            <label for="walletInput">Suspect Wallet Address</label>
-            <input id="walletInput" type="text" placeholder="0xabc... (ETH/BSC/Polygon)  or  Tabc... (Tron)  or  bc1... (Bitcoin)" class="input-field mono" />
+    <!-- Workspace Sticky Banner -->
+    <div class="workspace-header">
+      <div class="ws-target-info">
+        <div class="ws-target-address">
+          <span id="wsTargetAddr">0x0000000000000000000000000000000000000000</span>
+          <button class="copy-btn" onclick="copyTargetAddress()" title="Copy Address">📋</button>
+        </div>
+        <div class="ws-badges-row">
+          <span class="chain-pill" id="wsChainBadge">ETHEREUM</span>
+          <span class="risk-pill HIGH" id="wsRiskBadge">HIGH RISK (82/100)</span>
+          <span class="small muted" id="wsCaseRefBadge">Case: NCRP-2026-849102</span>
+          <span class="small dim" id="wsInvestigationId">INV-20260928-8491</span>
+          <span class="fiu-tag hidden" id="wsFiuTag">FIU-IND TARGET HIT</span>
+        </div>
+      </div>
+
+      <div class="ws-actions">
+        <button class="btn-secondary" onclick="downloadCurrentPdfReport()">
+          <span>📄</span> PDF Report
+        </button>
+        <button class="btn-primary" onclick="openCybercrimeTab()">
+          <span>⚖️</span> Section 91 Notice
+        </button>
+        <button class="btn-secondary" onclick="toggleCopilot()">
+          <span>🤖</span> Copilot
+        </button>
+      </div>
+    </div>
+
+    <!-- Workspace Tab Navigation -->
+    <div class="workspace-tabs">
+      <button class="ws-tab-btn active" onclick="switchWsTab('overview')"><span>📊</span> Overview</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('graph')"><span>🕸️</span> Transaction Graph</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('walletIntel')"><span>🧠</span> Wallet Intelligence</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('attribution')"><span>🏦</span> VASP Attribution</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('risk')"><span>⚠️</span> Risk Analysis</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('timeline')"><span>⏱️</span> Timeline</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('evidence')"><span>📎</span> Evidence Locker</button>
+      <button class="ws-tab-btn" onclick="switchWsTab('cybercrime')"><span>🏛️</span> Cybercrime Response</button>
+    </div>
+
+    <!-- ── TAB 1: OVERVIEW ── -->
+    <div id="tabOverview" class="ws-tab-pane">
+      <div class="overview-stats-grid">
+        <div class="stat-box">
+          <div class="stat-box-num" id="ovStatTxs">14</div>
+          <div class="stat-box-title">Transactions Scanned</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="ovStatVolume">7.70 ETH</div>
+          <div class="stat-box-title">Total Observed Volume</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="ovStatCounterparties">7</div>
+          <div class="stat-box-title">Unique Counterparties</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="ovStatVasps">3</div>
+          <div class="stat-box-title">VASP Candidates</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" style="color:#60a5fa;" id="ovStatConfidence">84.5%</div>
+          <div class="stat-box-title">Top Attribution Confidence</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" style="color:#ef4444;" id="ovStatRiskScore">82/100</div>
+          <div class="stat-box-title">Forensic Risk Score</div>
+        </div>
+      </div>
+
+      <div class="overview-double-grid">
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title"><span>🏷️</span> Behavioural Classification</div>
+            <span class="risk-pill HIGH" id="ovClassPill">Layering / Mule Dispersal Hub</span>
           </div>
-          <div class="form-group">
-            <label for="chainSelect">Blockchain</label>
-            <select id="chainSelect" class="input-field">
-              <option value="ethereum">Ethereum (ETH)</option>
-              <option value="bsc">BNB Chain (BSC)</option>
-              <option value="polygon">Polygon (MATIC)</option>
-              <option value="tron">Tron (TRX)</option>
-              <option value="bitcoin">Bitcoin (BTC)</option>
+          <p id="ovClassReason" style="font-size:13px;color:var(--text-muted);line-height:1.6;">
+            Rapid fund ingress followed by immediate fan-out to peel chains, mixer, and VASP deposit accounts within 120 minutes.
+          </p>
+          <div style="margin-top:14px;padding:12px;background:var(--bg-surface);border-radius:var(--radius-sm);font-size:12px;">
+            <b style="color:#60a5fa;">Why this classification?</b>
+            <p class="muted" style="margin-top:4px;" id="ovClassWhy">
+              Wallet exhibited short dwell time (&lt;15 mins), narrow single-source funding with multi-branch outflow, and 0.85 peel chain linearity.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title"><span>🏦</span> Primary VASP Attribution</div>
+            <span class="fiu-tag" id="ovVaspFiuBadge">FIU-IND Registered</span>
+          </div>
+          <h3 id="ovTopVaspName" style="color:#fff;font-size:16px;margin-bottom:6px;">CoinDCX (Neblio Technologies)</h3>
+          <p class="small muted" id="ovTopVaspMeta">Hops: 2 · Flow Volume: 3.45 ETH · Confidence: 84.5% (Strong Evidence)</p>
+          <div style="margin-top:12px;padding:10px 14px;background:var(--bg-surface);border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:11px;color:#93c5fd;" id="ovTopVaspPath">
+            0x742d35cc... → 0x11112222... → CoinDCX
+          </div>
+          <button class="btn-secondary btn-sm" style="margin-top:12px;" onclick="switchWsTab('attribution')">
+            <span>🔍</span> Inspect Attribution Hops
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Recommendation Banner -->
+      <div class="recommendation-banner">
+        <div class="icon">🚨</div>
+        <div>
+          <b style="font-size:14px;color:#fff;">Recommended Next Investigative Action</b>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px;" id="ovRecommendationText">
+            Target wallet routed 3.45 ETH into CoinDCX (FIU-IND Registered) and 2.10 ETH into Binance.
+            Issue immediate Section 91 CrPC / Section 94 BNSS KYC Disclosure and interim asset freeze notices to prevent fund liquidation.
+          </p>
+          <button class="btn-primary btn-sm" style="margin-top:10px;" onclick="openCybercrimeTab()">
+            <span>🏛️</span> Open Cybercrime Requisition Form
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 2: TRANSACTION GRAPH ── -->
+    <div id="tabGraph" class="ws-tab-pane hidden">
+      <div class="graph-wrapper">
+        <div class="graph-toolbar">
+          <select id="graphFilterSelect" class="input-field" style="min-width:140px;padding:4px 8px;font-size:11px;" onchange="filterGraphNodes()">
+            <option value="all">Show All Nodes</option>
+            <option value="vasps">VASPs Only</option>
+            <option value="intermediaries">Intermediaries Only</option>
+            <option value="risk">Mixer / High Risk Only</option>
+          </select>
+          <button class="btn-secondary btn-sm" onclick="resetGraphView()">Reset View</button>
+          <button class="btn-secondary btn-sm" onclick="toggleGraphPhysics()">Toggle Physics</button>
+        </div>
+
+        <div class="graph-legend-box">
+          <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span> Target Wallet</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> VASP / Exchange</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> Intermediary Mule</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Mixer / High Risk</div>
+        </div>
+
+        <div class="graph-viewport" id="graphContainer"></div>
+
+        <!-- Node Inspector Drawer (Side Panel) -->
+        <div class="node-inspector-drawer" id="nodeInspectorDrawer">
+          <div class="inspector-header">
+            <b style="font-size:13px;color:#fff;">Node Inspector</b>
+            <span class="small dim" id="inspectorNodeType">Target</span>
+          </div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:#60a5fa;word-break:break-all;" id="inspectorAddress">
+            Select a node in the graph to inspect forensic details.
+          </div>
+          <div id="inspectorDetails" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;">
+            <div class="stat-box" style="padding:10px;">
+              <div class="stat-box-title">Entity Label</div>
+              <b style="font-size:13px;color:#fff;" id="inspectorLabel">—</b>
+            </div>
+            <div class="stat-box" style="padding:10px;">
+              <div class="stat-box-title">Risk Assessment</div>
+              <span class="risk-pill LOW" id="inspectorRisk">LOW</span>
+            </div>
+            <div class="stat-box" style="padding:10px;">
+              <div class="stat-box-title">Direct Transactions</div>
+              <div id="inspectorTxList" class="small muted" style="margin-top:6px;max-height:160px;overflow-y:auto;">
+                Click any graph node to inspect flow.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 3: WALLET INTELLIGENCE ── -->
+    <div id="tabWalletIntel" class="ws-tab-pane hidden">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title-row">
+          <div class="card-title"><span>🧠</span> Wallet Behaviour Profile</div>
+          <span class="risk-pill HIGH" id="wiProfileTitle">Layering-like / Rapid Dispersal Hub</span>
+        </div>
+        <p class="muted" style="font-size:13px;line-height:1.6;" id="wiProfileDesc">
+          Forensic behavioral analysis categorizes this wallet as a structuring and layering hub.
+          Received capital was fanned out across multiple hops within minutes of ingress.
+        </p>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="stat-box">
+          <div class="stat-box-num" id="wiVelocity">8.5</div>
+          <div class="stat-box-title">Velocity (tx / day)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="wiBurstScore">3.4</div>
+          <div class="stat-box-title">Burst Score (&gt;2.0 = structuring)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="wiInOutRatio">0.95</div>
+          <div class="stat-box-title">In / Out Ratio (1.0 = pass-through)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" id="wiPeelChain">0.85</div>
+          <div class="stat-box-title">Peel Chain Linearity Score</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" style="color:#ef4444;" id="wiMixerExposure">14.0%</div>
+          <div class="stat-box-title">Mixer / Obfuscator Exposure</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-num" style="color:#10b981;" id="wiVaspExposure">42.0%</div>
+          <div class="stat-box-title">VASP Flow Concentration</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><span>📊</span> Explainable Behaviour Rules Triggered</div>
+        <div id="wiRulesTriggered" style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 4: VASP ATTRIBUTION ── -->
+    <div id="tabVaspAttribution" class="ws-tab-pane hidden">
+      <div class="card" style="margin-bottom:20px;border-color:var(--border-accent);">
+        <div class="card-title-row">
+          <div class="card-title"><span>📐</span> Multi-Dimensional VASP Attribution Engine</div>
+          <span class="small muted">Auditable Forensic Scoring</span>
+        </div>
+        <p class="muted small" style="margin-bottom:12px;">
+          Attribution confidence is calculated through a transparent formula balancing graph proximity, flow volume, temporal recency, and registry provenance:
+        </p>
+        <div style="background:var(--bg-secondary);padding:12px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:12px;color:#93c5fd;line-height:1.6;">
+          Confidence Score = (0.40 × Proximity) + (0.30 × Interaction Volume) + (0.20 × Recency) + (0.10 × Provenance)
+        </div>
+      </div>
+
+      <!-- VASP Candidates Cards -->
+      <div id="vaspCandidatesList" style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Explain Attribution (Hop-by-hop Walk) -->
+      <div class="card" style="margin-top:24px;">
+        <div class="card-title-row">
+          <div class="card-title"><span>🔎</span> Explain Attribution: Hop-by-Hop Forensic Walk</div>
+          <span class="small dim" id="explainVaspTitle">Viewing CoinDCX Attribution</span>
+        </div>
+        <p class="muted small" id="explainVaspText" style="margin-bottom:16px;line-height:1.6;">
+          The suspect wallet interacted with intermediary wallet Mule Alpha on 1 occasion. Mule Alpha subsequently deposited directly into CoinDCX.
+        </p>
+        <div class="hop-walk-container" id="hopWalkContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 5: RISK ANALYSIS ── -->
+    <div id="tabRiskAnalysis" class="ws-tab-pane hidden">
+      <div class="overview-double-grid">
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title"><span>⚠️</span> Overall Risk Evaluation</div>
+            <span class="risk-pill HIGH" id="raRiskPill">82 / 100</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:20px;margin-top:14px;">
+            <div style="width:80px;height:80px;border-radius:50%;border:4px solid var(--risk-high);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fca5a5;" id="raRiskCircle">
+              82
+            </div>
+            <div>
+              <b style="font-size:14px;color:#fff;" id="raRiskLevelText">HIGH RISK LEVEL</b>
+              <p class="muted small" style="margin-top:4px;">
+                Risk score triggers mandatory Section 91 CrPC notice for cyber-financial fraud under PMLA.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title"><span>🚨</span> Detected Laundering Typologies</div>
+            <span class="small muted">PMLA / FATF Patterns</span>
+          </div>
+          <div id="raTypologiesList" style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Signals Table -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><span>📊</span> Forensic Risk Signals Breakdown</div>
+        <table class="data-table" style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>Forensic Indicator</th>
+              <th>Severity Weight</th>
+              <th>Raw Signal Score</th>
+              <th>Weighted Impact</th>
+              <th>Forensic Observation</th>
+            </tr>
+          </thead>
+          <tbody id="raSignalsTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB 6: TIMELINE ── -->
+    <div id="tabTimeline" class="ws-tab-pane hidden">
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span>⏱️</span> Chronological Fund Movement Timeline</div>
+          <span class="small muted">UTC Sequence of Events</span>
+        </div>
+        <p class="muted small" style="margin-bottom:16px;">
+          Reconstructed timeline tracking fund ingress, intermediate layering, peel chains, and final VASP cashouts:
+        </p>
+        <div class="timeline-track" id="timelineTrackContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB 7: EVIDENCE LOCKER ── -->
+    <div id="tabEvidence" class="ws-tab-pane hidden">
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span>📎</span> Chain of Custody & Evidence Locker</div>
+          <div style="display:flex;gap:8px;">
+            <select id="evidenceFilterSelect" class="input-field" style="min-width:140px;padding:4px 8px;font-size:11px;" onchange="filterEvidenceTable()">
+              <option value="all">All Evidence</option>
+              <option value="Relevant">Relevant Only</option>
+              <option value="Reviewed">Reviewed Only</option>
+              <option value="Needs Verification">Needs Verification</option>
             </select>
           </div>
-          <div class="form-group" style="flex:0 0 90px;">
-            <label for="hopsInput">Max Hops</label>
-            <input id="hopsInput" type="number" min="1" max="6" value="3" class="input-field" style="text-align:center;" />
-          </div>
         </div>
-        <div class="btn-row">
-          <button id="traceBtn" class="btn-primary" onclick="runTrace()">🚀 Start Investigation</button>
-          <button class="btn-secondary" onclick="clearResults()">✕ Clear</button>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;margin-left:auto;padding:6px 10px;background:var(--panel2);border-radius:6px;border:1px solid var(--border);">
-            <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()" style="accent-color:var(--accent);" />
-            Demo mode
-          </label>
+        <table class="data-table" style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>Evidence ID</th>
+              <th>Type</th>
+              <th>Transaction Hash</th>
+              <th>Counterparty</th>
+              <th>Amount</th>
+              <th>Timestamp</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="evidenceTableBody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TAB 8: CYBERCRIME RESPONSE ── -->
+    <div id="tabCybercrime" class="ws-tab-pane hidden">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title-row">
+          <div class="card-title"><span>⚖️</span> India-Focused Cybercrime Response Workflow</div>
+          <span class="fiu-tag">I4C / NCRP Ready</span>
         </div>
-        <p class="hint">Traces the wallet's transaction graph outward across the selected chain, scores its risk level, and identifies the nearest VASP/exchange for SAHYOG routing.</p>
+        <p class="muted small" style="line-height:1.6;">
+          Complies with standard operating procedures under the Information Technology Act (2000), Section 91 of CrPC (or Section 94 of BNSS 2023), and FIU-IND reporting obligations.
+        </p>
       </div>
 
-      <!-- Status area -->
-      <div id="statusArea"></div>
-      <div id="demoNotice" class="hidden" style="padding:10px 14px;margin-bottom:12px;border-radius:6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#fcd34d;font-size:13px;"></div>
-
-      <!-- Results -->
-      <div id="resultsArea" class="hidden">
-
-        <!-- Risk banner -->
-        <div class="risk-banner" id="riskBanner">
-          <div class="risk-banner-left">
-            <div class="risk-badge-large" id="riskBadge">LOW RISK</div>
+      <div class="overview-double-grid">
+        <!-- Notice Generator Controls -->
+        <div class="card">
+          <div class="card-title"><span>📝</span> Requisition Notice Parameters</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px;">
             <div>
-              <div class="risk-wallet-addr" id="riskWalletAddr"></div>
-              <div class="risk-typologies" id="riskTypologies"></div>
+              <label class="small muted">Police Station / Cyber Cell</label>
+              <input type="text" id="noticePsInput" class="input-field" value="Cyber Crime Police Station, Central District" />
             </div>
-          </div>
-          <div class="risk-banner-right">
-            <div class="risk-score-circle" id="riskScoreCircle">0</div>
-            <div class="small muted" style="text-align:center;">Risk Score</div>
-          </div>
-        </div>
-
-        <!-- Wallet classification + SAHYOG routing -->
-        <div class="results-row">
-          <div class="card">
-            <h3 class="card-title">🏷️ Wallet Classification</h3>
-            <div id="walletClassification"></div>
-          </div>
-          <div class="card sahyog-card">
-            <h3 class="card-title">🏛️ SAHYOG Routing</h3>
-            <div id="sahyogRouting"></div>
-            <button class="btn-secondary" id="sahyogBtn" onclick="submitToSahyog()" style="margin-top:10px;">Submit to SAHYOG Portal</button>
-          </div>
-        </div>
-
-        <!-- Risk score breakdown -->
-        <div id="scoreCardsContainer"></div>
-
-        <!-- Scoring Methodology -->
-        <div class="card" style="border-color:var(--accent);">
-          <h3 class="card-title">📐 Scoring Methodology</h3>
-          <p style="font-size:12px;color:var(--text2);margin:0 0 12px 0;">
-            The risk score (0–100) is a <b>transparent, auditable formula</b> — not a black-box ML model.
-            Each signal is weighted by severity, then combined with a multi-signal boost.
-          </p>
-          <div style="background:var(--surface-2);border-radius:8px;padding:12px;font-family:monospace;font-size:13px;line-height:1.8;overflow-x:auto;">
-            <span style="color:#a78bfa;">final_score</span> = <span style="color:#60a5fa;">Σ</span>(signal_score × signal_weight) + boost<br/>
-            <br/>
-            <span style="color:#60a5fa;">where:</span><br/>
-            &nbsp;&nbsp;boost = <span style="color:#fbbf24;">min(20, (n_signals − 1) × 5)</span>  &nbsp;// more signals = higher confidence<br/>
-            &nbsp;&nbsp;clamped to <span style="color:#34d399;">[0, 100]</span><br/>
-            <br/>
-            <span style="color:#60a5fa;">Signal weights (severity):</span><br/>
-            &nbsp;&nbsp;self_is_high_risk  = <span style="color:#f87171;">1.00</span>  &nbsp;(wallet in known flagged registry)<br/>
-            &nbsp;&nbsp;sanctions_link     = <span style="color:#f87171;">0.95</span>  &nbsp;(tx with OFAC-sanctioned address)<br/>
-            &nbsp;&nbsp;ransomware_link    = <span style="color:#f87171;">0.90</span>  &nbsp;(tx with known ransomware address)<br/>
-            &nbsp;&nbsp;darknet_link       = <span style="color:#fb923c;">0.85</span>  &nbsp;(tx with darknet marketplace)<br/>
-            &nbsp;&nbsp;fraud_link         = <span style="color:#fb923c;">0.70</span>  &nbsp;(tx with fraud-linked address)<br/>
-            &nbsp;&nbsp;mixer_interaction  = <span style="color:#fbbf24;">0.75</span>  &nbsp;(funds to/from mixer/tumbler)<br/>
-            &nbsp;&nbsp;structuring        = <span style="color:#fbbf24;">0.50</span>  &nbsp;(many near-identical tx values)<br/>
-            &nbsp;&nbsp;peel_chain         = <span style="color:#a3e635;">0.40</span>  &nbsp;(linear single-hop chain)<br/>
-            &nbsp;&nbsp;cross_chain_bridge = <span style="color:#a3e635;">0.30</span>  &nbsp;(bridge/swap contract interaction)<br/>
-            &nbsp;&nbsp;high_velocity      = <span style="color:#a3e635;">0.25</span>  &nbsp;(abnormally high tx rate)<br/>
-            <br/>
-            <span style="color:#60a5fa;">Risk thresholds:</span><br/>
-            &nbsp;&nbsp;HIGH  = score ≥ <span style="color:#f87171;">60</span><br/>
-            &nbsp;&nbsp;MEDIUM = score ≥ <span style="color:#fbbf24;">25</span><br/>
-            &nbsp;&nbsp;LOW   = score &lt; 25
-          </div>
-        </div>
-
-        <!-- Evidence (full-width) -->
-        <div class="card" style="margin-bottom:16px;">
-          <h3 class="card-title">📎 Evidence</h3>
-          <p class="muted small" style="margin-bottom:10px;">Transactions connecting the traced wallet to VASP candidates.</p>
-          <div id="evidenceList"></div>
-        </div>
-
-        <!-- VASP matches + graph (side by side) -->
-        <div class="results-grid">
-          <div class="card">
-            <h3 class="card-title">🏦 VASP Attribution</h3>
-            <div id="matchesList"></div>
-            <button id="reportBtn" class="btn-secondary hidden" onclick="downloadReport()">📄 Download PDF Report</button>
-          </div>
-          <div class="card">
-            <div class="graph-header-row">
-              <h3 class="card-title" style="margin-bottom:0;">🕸️ Transaction Graph</h3>
-              <div id="graphLegend" class="graph-legend"></div>
+            <div>
+              <label class="small muted">FIR / Crime Number</label>
+              <input type="text" id="noticeFirInput" class="input-field" value="FIR-2026/89-CYBER" />
             </div>
-            <div id="graphContainer"></div>
+            <div>
+              <label class="small muted">Investigating Officer Name</label>
+              <input type="text" id="noticeIoInput" class="input-field" value="Inspector R. Verma" />
+            </div>
+            <div>
+              <label class="small muted">Target VASP</label>
+              <select id="noticeVaspSelect" class="input-field">
+                <option value="CoinDCX (Neblio Technologies)">CoinDCX (Neblio Technologies - FIU Registered)</option>
+                <option value="Binance Hot Wallet 6">Binance (Offshore Reporting Entity)</option>
+                <option value="WazirX (Zanmai Labs)">WazirX (Zanmai Labs - FIU Registered)</option>
+              </select>
+            </div>
+            <button class="btn-primary" onclick="generateLegalNotice()">
+              <span>⚖️</span> Generate Section 91 CrPC Notice
+            </button>
           </div>
         </div>
 
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── HISTORY PANEL ─── -->
-  <section class="panel-page hidden" id="panelHistory">
-    <div class="card">
-      <div class="panel-header">
-        <h2 class="card-title">📋 Case History</h2>
-        <div class="filter-row">
-          <select id="historyChainFilter" class="input-field small-select" onchange="loadHistory()">
-            <option value="">All Chains</option>
-            <option value="ethereum">Ethereum</option>
-            <option value="bsc">BNB Chain</option>
-            <option value="polygon">Polygon</option>
-            <option value="tron">Tron</option>
-            <option value="bitcoin">Bitcoin</option>
-          </select>
-          <select id="historyRiskFilter" class="input-field small-select" onchange="loadHistory()">
-            <option value="">All Risk Levels</option>
-            <option value="HIGH">HIGH</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="LOW">LOW</option>
-          </select>
+        <!-- Generated Notice Box -->
+        <div class="card">
+          <div class="card-title-row">
+            <div class="card-title"><span>📄</span> Formal Requisition Notice Preview</div>
+            <button class="btn-secondary btn-sm" onclick="copyLegalNotice()">Copy Notice Text</button>
+          </div>
+          <pre class="legal-notice-box" id="legalNoticePreview">Click 'Generate Section 91 CrPC Notice' to compile formal notice.</pre>
         </div>
       </div>
-      <div id="historyTable"><p class="muted">No cases yet.</p></div>
     </div>
+
   </section>
 
-  <!-- ─── ALERTS PANEL ─── -->
-  <section class="panel-page hidden" id="panelAlerts">
+  <!-- ─── 3. VASP INTELLIGENCE DIRECTORY VIEW ─── -->
+  <section id="viewVasps" class="hidden">
     <div class="card">
-      <h2 class="card-title">🚨 High-Risk Wallet Alerts</h2>
-      <p class="muted small" style="margin-bottom:16px;">Wallets flagged with HIGH risk level during this session.</p>
-      <div id="alertsList"><p class="muted">No high-risk wallets flagged yet.</p></div>
-    </div>
-  </section>
-
-  <!-- ─── VASPs PANEL ─── -->
-  <section class="panel-page hidden" id="panelVasps">
-    <div class="card">
-      <div class="panel-header">
-        <h2 class="card-title">🏦 Known VASP Database</h2>
-        <div class="filter-row">
-          <input id="vaspSearch" type="text" placeholder="Search by name or address…" class="input-field" style="width:260px;" oninput="searchVasps()" />
+      <div class="card-title-row">
+        <div class="card-title"><span>🏦</span> Virtual Asset Service Provider (VASP) Directory</div>
+        <div style="display:flex;gap:10px;">
+          <input type="text" id="vaspSearchInput" class="input-field" placeholder="Search by exchange or address..." oninput="filterVaspsList()" />
+          <button class="btn-secondary btn-sm" id="btnFilterFiu" onclick="toggleFiuFilter()">FIU-IND Only</button>
         </div>
       </div>
-      <p class="muted small" id="vaspCount" style="margin-bottom:12px;">Loading…</p>
-      <div id="vaspList"></div>
+      <table class="data-table" style="margin-top:14px;">
+        <thead>
+          <tr>
+            <th>VASP Entity Name</th>
+            <th>Category</th>
+            <th>FIU-IND Status</th>
+            <th>Country / Jurisdiction</th>
+            <th>Compliance Requisition Contact</th>
+            <th>Registered Address</th>
+          </tr>
+        </thead>
+        <tbody id="vaspDirectoryTableBody">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
     </div>
   </section>
 
-</div><!-- /main-wrapper -->
+  <!-- ─── 4. REPORTS VIEW ─── -->
+  <section id="viewReports" class="hidden">
+    <div class="card">
+      <div class="card-title-row">
+        <div class="card-title"><span>📄</span> Generated Investigation Reports</div>
+        <span class="small muted">Downloadable Forensic Evidence Summaries</span>
+      </div>
+      <table class="data-table" style="margin-top:14px;">
+        <thead>
+          <tr>
+            <th>Case Ref</th>
+            <th>Target Address</th>
+            <th>Chain</th>
+            <th>Risk Level</th>
+            <th>Attributed VASP</th>
+            <th>Generated Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════════ NEW INVESTIGATION MODAL ═══════════════ -->
+<div class="modal-overlay hidden" id="modalNewInvestigation">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="card-title"><span>🚀</span> Initiate New Blockchain Investigation</div>
+      <button class="inspector-close" onclick="closeNewInvestigationModal()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label class="small muted" style="display:block;margin-bottom:4px;">Target Suspect Wallet Address *</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="modalWalletInput" class="input-field mono" placeholder="0x... or T... or bc1..." />
+          <button class="btn-secondary btn-sm" onclick="pasteModalDemoWallet()">Demo Target</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="small muted" style="display:block;margin-bottom:4px;">Blockchain Network</label>
+          <select id="modalChainSelect" class="input-field" style="width:100%;">
+            <option value="ethereum">Ethereum (ETH)</option>
+            <option value="bsc">BNB Chain (BSC)</option>
+            <option value="polygon">Polygon (MATIC)</option>
+            <option value="tron">Tron (TRX)</option>
+            <option value="bitcoin">Bitcoin (BTC)</option>
+          </select>
+        </div>
+        <div>
+          <label class="small muted" style="display:block;margin-bottom:4px;">Max Search Hops (1-6)</label>
+          <input type="number" id="modalHopsInput" class="input-field" value="3" min="1" max="6" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="small muted" style="display:block;margin-bottom:4px;">Case Reference / FIR No.</label>
+          <input type="text" id="modalCaseRefInput" class="input-field" value="NCRP-2026-849102" />
+        </div>
+        <div>
+          <label class="small muted" style="display:block;margin-bottom:4px;">NCRP Complaint Acknowledgement</label>
+          <input type="text" id="modalComplaintInput" class="input-field" placeholder="e.g. 219082600123" />
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+        <input type="checkbox" id="modalDemoModeCheck" checked style="accent-color:var(--primary);" />
+        <label for="modalDemoModeCheck" class="small muted" style="cursor:pointer;">
+          Run in <b>Deterministic Demo Mode</b> (offline test data without API quota consumption)
+        </label>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+        <button class="btn-secondary" onclick="closeNewInvestigationModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitModalInvestigation()">Launch Investigation</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ COPILOT SLIDE-OUT DRAWER ═══════════════ -->
+<aside class="copilot-drawer" id="copilotDrawer">
+  <div class="copilot-header">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px;">🤖</span>
+      <div>
+        <b style="font-size:13px;color:#fff;">Investigation Copilot</b>
+        <div class="small dim" id="copilotEngineBadge">Deterministic Intelligence Engine</div>
+      </div>
+    </div>
+    <button class="inspector-close" onclick="toggleCopilot()">✕</button>
+  </div>
+
+  <div class="copilot-body" id="copilotChatBody">
+    <div class="copilot-msg assistant">
+      Hello Investigator. I am <b>CryptoGuard Copilot</b>. I analyze on-chain evidence and VASP attribution for the active case.
+      <br/><br/>
+      You can ask me questions about this investigation:
+      <div class="copilot-suggested-queries">
+        <span class="copilot-chip" onclick="askCopilot('Why was CoinDCX attributed?')">Why CoinDCX?</span>
+        <span class="copilot-chip" onclick="askCopilot('What is the shortest transaction path?')">Shortest Path</span>
+        <span class="copilot-chip" onclick="askCopilot('What are the strongest risk indicators?')">Risk Indicators</span>
+        <span class="copilot-chip" onclick="askCopilot('Show the largest transaction.')">Largest Tx</span>
+        <span class="copilot-chip" onclick="askCopilot('Summarize this investigation.')">Case Summary</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="copilot-footer">
+    <input type="text" id="copilotInput" class="input-field" placeholder="Ask about this investigation..." onkeydown="if(event.key==='Enter') sendCopilotQuery()" />
+    <button class="btn-primary btn-sm" onclick="sendCopilotQuery()">Send</button>
+  </div>
+</aside>
 
 <script src="/static/js/app.js"></script>
 </body>

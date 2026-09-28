@@ -1,17 +1,17 @@
-#!/bin/bash
-# Quick start script - run from the project root.
+#!/usr/bin/env bash
 set -e
-
 cd "$(dirname "$0")/backend"
 
+echo "============================================================"
+echo "  CryptoGuard AI -- Blockchain Investigation & VASP Attribution"
+echo "  SIH 2026 Problem Statement SIH26182"
+echo "============================================================"
+
 if [ ! -f ".env" ]; then
-    echo "No .env found - copying .env.example. Edit .env and add your ETHERSCAN_API_KEY before continuing."
+    echo "[INFO] No .env found. Generating default .env from .env.example ..."
     cp .env.example .env
-    exit 1
+    echo "[INFO] Running in high-fidelity Deterministic DEMO MODE."
 fi
 
-echo "Installing dependencies..."
-pip install -r requirements.txt --quiet
-
-echo "Starting server at http://127.0.0.1:8000 ..."
-uvicorn main:app --reload --port 8000
+echo "[INFO] Starting CryptoGuard AI on http://127.0.0.1:8000 ..."
+python3 -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
