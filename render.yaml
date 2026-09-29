@@ -2,6 +2,7 @@ services:
   - type: web
     name: cryptoguard-ai
     env: python
+    branch: sih26182-cryptoguard
     region: singapore
     plan: free
     buildCommand: "pip install -r backend/requirements.txt"
