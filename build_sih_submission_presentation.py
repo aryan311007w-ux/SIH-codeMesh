@@ -347,7 +347,7 @@ def build_submission_presentation():
         ("Frontend Engine", "Vanilla HTML5 / CSS3 / ES6 JS / Vis-network v9.1.2 (100% Offline / Zero CDN)", BORDER_BLUE, LIGHT_BLUE_BG),
         ("Backend ASGI", "Python 3.10+ / FastAPI v0.141 / Uvicorn ASGI Server with Pydantic validation", PURPLE_BORDER, PURPLE_BG),
         ("Forensic Store", "Persistent SQLite3 (cryptoguard.db - 7 indexed relational tables)", GREEN_BORDER, GREEN_BG),
-        ("Live Deployment", "Web: https://clicks-prohibited-unity-relatively.trycloudflare.com | Code: github.com/aryan311007w-ux/SIH-codeMesh", AMBER_BORDER, AMBER_BG),
+        ("Live Deployment", "Web: https://tubes-intersection-judicial-weapon.trycloudflare.com | Code: github.com/aryan311007w-ux/SIH-codeMesh", AMBER_BORDER, AMBER_BG),
     ]
     chip_w = Inches(2.85)
     chip_h = Inches(0.95)
@@ -739,7 +739,7 @@ def build_submission_presentation():
     r3.font.color.rgb = SLATE_TEXT
 
     r4 = p.add_run()
-    r4.text = "https://clicks-prohibited-unity-relatively.trycloudflare.com   |   "
+    r4.text = "https://tubes-intersection-judicial-weapon.trycloudflare.com   |   "
     r4.font.bold = True
     r4.font.size = Pt(9)
     r4.font.color.rgb = ELECTRIC_BLUE
