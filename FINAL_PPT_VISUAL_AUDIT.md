@@ -132,7 +132,7 @@ The presentation strictly honors all hackathon truthfulness rules:
 3. **Asset Freezing:** Stated as operational acceleration via rapid Section 91 notice issuance — no false claims of automated protocol freezing.
 4. **Demo Data:** Explicitly marked as synthetic demonstration data (`NCRP-2026-849102`).
 5. **Statistics:** Zero fabricated precision, recall, or percentage improvement numbers.
-6. **URLs:** Active GitHub repository (`https://github.com/aryan311007w-ux/SIH-codeMesh`) and live production deployment (`https://cryptoguard-ai.onrender.com`) verified.
+6. **URLs:** Active GitHub repository (`https://github.com/aryan311007w-ux/SIH-codeMesh`), live working test URL (`https://clicks-prohibited-unity-relatively.trycloudflare.com`), and production Render deployment (`https://cryptoguard-ai.onrender.com`) verified.
 
 ---
 

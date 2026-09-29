@@ -9,3 +9,7 @@ __pycache__/
 secrets/
 *.db
 ~$*
+cloudflared.exe
+*.log
+LIVE_URL.txt
+start_tunnel.py

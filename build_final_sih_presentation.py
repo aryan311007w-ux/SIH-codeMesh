@@ -430,7 +430,7 @@ def build_presentation():
 
     links = [
         ("GITHUB LINK", "https://github.com/aryan311007w-ux/SIH-codeMesh", ELECTRIC_BLUE),
-        ("WEBSITE LINK", "https://cryptoguard-ai.onrender.com", ELECTRIC_BLUE),
+        ("WEBSITE LINK", "https://clicks-prohibited-unity-relatively.trycloudflare.com", ELECTRIC_BLUE),
         ("DEMO VIDEO", "To be updated after deployment", MUTED_TEXT),
     ]
     for l_label, l_url, col in links:
@@ -867,7 +867,7 @@ def build_presentation():
     r3.font.color.rgb = SLATE_TEXT
 
     r4 = p.add_run()
-    r4.text = "https://cryptoguard-ai.onrender.com  |  "
+    r4.text = "https://clicks-prohibited-unity-relatively.trycloudflare.com  |  "
     r4.font.bold = True
     r4.font.size = Pt(9)
     r4.font.color.rgb = ELECTRIC_BLUE
