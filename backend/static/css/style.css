@@ -54,8 +54,8 @@
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 24px rgba(59, 130, 246, 0.2);
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", Menlo, Consolas, monospace;
 }
 
 * {
@@ -721,49 +721,70 @@ select.input-field {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
-  height: 640px;
+  height: clamp(440px, 60vh, 700px);
   display: flex;
+  transition: all 0.25s ease;
+}
+
+.graph-wrapper.fullscreen-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  background: var(--bg-primary);
 }
 
 .graph-viewport {
   flex: 1;
   height: 100%;
+  min-width: 0;
+  position: relative;
 }
 
 .graph-toolbar {
   position: absolute;
   top: 14px;
   left: 14px;
-  z-index: 10;
-  background: rgba(18, 26, 45, 0.85);
+  z-index: 20;
+  background: rgba(18, 26, 45, 0.9);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+  max-width: calc(100% - 28px);
 }
 
 .graph-legend-box {
   position: absolute;
   bottom: 14px;
   left: 14px;
-  z-index: 10;
-  background: rgba(18, 26, 45, 0.85);
+  z-index: 20;
+  background: rgba(18, 26, 45, 0.9);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   font-size: 11px;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+  max-width: calc(100% - 370px);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .legend-dot {
@@ -779,7 +800,53 @@ select.input-field {
   border-left: 1px solid var(--border-color);
   padding: 20px;
   overflow-y: auto;
-  transition: all 0.3s ease;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 25;
+  position: relative;
+}
+
+.node-inspector-drawer.closed {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .graph-wrapper {
+    flex-direction: column;
+    height: auto;
+    min-height: 580px;
+  }
+  .graph-viewport {
+    height: clamp(380px, 50vh, 520px);
+    width: 100%;
+  }
+  .node-inspector-drawer {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    max-height: 260px;
+  }
+  .graph-legend-box {
+    max-width: calc(100% - 28px);
+    bottom: 8px;
+    left: 8px;
+    gap: 8px;
+    font-size: 10px;
+  }
+  .graph-toolbar {
+    top: 8px;
+    left: 8px;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .graph-toolbar {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+  .graph-legend-box {
+    display: none;
+  }
 }
 
 .inspector-header {
@@ -1063,6 +1130,34 @@ select.input-field {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
 }
+
+.modal-card.modal-lg {
+  max-width: 920px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.raw-json-pre {
+  background: #090e1a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: #38bdf8;
+  max-height: 58vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.json-key { color: #93c5fd; font-weight: 600; }
+.json-string { color: #86efac; }
+.json-number { color: #fde047; }
+.json-boolean { color: #f472b6; font-weight: 600; }
+.json-null { color: #94a3b8; font-style: italic; }
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {

@@ -152,6 +152,21 @@ async function loadDemoTarget() {
   await runInvestigation(DEMO_WALLET, "ethereum", 3, "NCRP-2026-849102", true, true);
 }
 
+async function loadSampleWallet(wallet, chain, isDemo = true) {
+  const input = document.getElementById("quickWalletInput");
+  const chainSelect = document.getElementById("quickChainSelect");
+  if (input) input.value = wallet;
+  if (chainSelect) chainSelect.value = chain;
+  await runInvestigation(wallet, chain, 3, "NCRP-2026-849102", isDemo, true);
+}
+
+async function retryActiveWalletInDemoMode() {
+  if (!STATE.activeInvestigation) return;
+  const w = STATE.activeInvestigation.wallet;
+  const ch = STATE.activeInvestigation.chain || "ethereum";
+  await runInvestigation(w, ch, 3, "NCRP-2026-849102", true, true);
+}
+
 // ═══════════════════════════════ CORE INVESTIGATION ═══════════════════
 async function runInvestigation(wallet, chain, hops = 3, caseRef = "", isDemo = false, autoNavigate = true) {
   try {
@@ -203,6 +218,20 @@ function renderActiveInvestigation() {
     document.getElementById("wsFiuTag").classList.remove("hidden");
   } else {
     document.getElementById("wsFiuTag").classList.add("hidden");
+  }
+
+  // Live Mode Missing Credentials Warning Banner
+  const warnBanner = document.getElementById("wsLiveWarningBanner");
+  if (warnBanner) {
+    if (data._live_key_missing || data.warning_title) {
+      warnBanner.classList.remove("hidden");
+      const titleEl = document.getElementById("wsLiveWarningTitle");
+      const msgEl = document.getElementById("wsLiveWarningMsg");
+      if (titleEl && data.warning_title) titleEl.textContent = data.warning_title;
+      if (msgEl && data.warning_message) msgEl.textContent = data.warning_message;
+    } else {
+      warnBanner.classList.add("hidden");
+    }
   }
 
   // 1. Overview Tab
@@ -313,7 +342,7 @@ function initGraphView() {
       color: { background: color, border: "#ffffff", highlight: { background: "#ffffff", border: color } },
       shape: shape,
       size: size,
-      font: { color: "#e2e8f0", size: 10, face: "Inter" }
+      font: { color: "#e2e8f0", size: 10, face: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" }
     };
   });
 
@@ -386,6 +415,32 @@ function inspectNode(nodeId) {
       txListEl.appendChild(div);
     });
   }
+  const drawer = document.getElementById("nodeInspectorDrawer");
+  if (drawer) drawer.classList.remove("closed");
+}
+
+function closeNodeInspector() {
+  const drawer = document.getElementById("nodeInspectorDrawer");
+  if (drawer) drawer.classList.add("closed");
+}
+
+function toggleGraphFullscreen() {
+  const wrapper = document.getElementById("graphWrapper");
+  const btn = document.getElementById("graphExpandBtn");
+  if (!wrapper) return;
+
+  const isFullscreen = wrapper.classList.toggle("fullscreen-mode");
+  if (btn) {
+    btn.innerHTML = isFullscreen ? "<span>↙️</span> Exit Fullscreen" : "<span>⛶</span> Expand Graph";
+  }
+
+  // Allow browser layout recalculation then fit all nodes in viewport
+  setTimeout(() => {
+    if (STATE.network) {
+      STATE.network.redraw();
+      STATE.network.fit({ animation: { duration: 400 } });
+    }
+  }, 120);
 }
 
 function resetGraphView() {
@@ -858,6 +913,20 @@ async function sendCopilotQuery() {
       const data = await res.json();
       thinkMsg.innerHTML = data.answer.replace(/\n/g, "<br/>").replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
       document.getElementById("copilotEngineBadge").textContent = data.engine;
+
+      if (data.chips && data.chips.length > 0) {
+        const chipsDiv = document.createElement("div");
+        chipsDiv.className = "copilot-suggested-queries";
+        chipsDiv.style.marginTop = "10px";
+        data.chips.forEach(chipText => {
+          const chip = document.createElement("span");
+          chip.className = "copilot-chip";
+          chip.textContent = chipText;
+          chip.onclick = () => askCopilot(chipText);
+          chipsDiv.appendChild(chip);
+        });
+        thinkMsg.appendChild(chipsDiv);
+      }
     } else {
       thinkMsg.textContent = "Unable to process query.";
     }
@@ -916,6 +985,91 @@ function downloadCurrentPdfReport() {
 
 function downloadReportForWallet(wallet, chain) {
   window.open(`/api/report/${encodeURIComponent(wallet)}?chain=${encodeURIComponent(chain)}`, "_blank");
+}
+
+// ═══════════════════════════════ RAW JSON EVIDENCE VIEWER ══════════════
+function syntaxHighlightJson(json) {
+  if (typeof json !== 'string') {
+    json = JSON.stringify(json, null, 2);
+  }
+  return json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+      let cls = 'json-number';
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+          cls = 'json-key';
+        } else {
+          cls = 'json-string';
+        }
+      } else if (/true|false/.test(match)) {
+        cls = 'json-boolean';
+      } else if (/null/.test(match)) {
+        cls = 'json-null';
+      }
+      return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+function openAnalysisDataModal() {
+  const modal = document.getElementById("modalAnalysisData");
+  const viewer = document.getElementById("analysisJsonViewer");
+  const meta = document.getElementById("rawJsonMeta");
+  if (!modal || !viewer) return;
+
+  if (!STATE.activeInvestigation) {
+    alert("Please initiate or load an investigation first.");
+    return;
+  }
+
+  // Create clean export copy (exclude internal secrets/credentials)
+  const cleanData = JSON.parse(JSON.stringify(STATE.activeInvestigation));
+  const jsonStr = JSON.stringify(cleanData, null, 2);
+  const sizeKb = (new Blob([jsonStr]).size / 1024).toFixed(2);
+  const invId = cleanData.investigation_id || "INV-ACTIVE";
+  const nodesCnt = (cleanData.nodes || []).length;
+  const edgesCnt = (cleanData.edges || []).length;
+
+  if (meta) {
+    meta.textContent = `Payload: ${invId} | ${sizeKb} KB | ${nodesCnt} nodes | ${edgesCnt} edges`;
+  }
+
+  viewer.innerHTML = syntaxHighlightJson(cleanData);
+  modal.classList.remove("hidden");
+}
+
+function closeAnalysisDataModal() {
+  const modal = document.getElementById("modalAnalysisData");
+  if (modal) modal.classList.add("hidden");
+}
+
+function copyAnalysisJson() {
+  if (!STATE.activeInvestigation) return;
+  const jsonStr = JSON.stringify(STATE.activeInvestigation, null, 2);
+  navigator.clipboard.writeText(jsonStr).then(() => {
+    const btn = document.getElementById("btnCopyJson");
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = "✅ Copied!";
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }
+  }).catch(() => {
+    alert("Copied to clipboard!");
+  });
+}
+
+function downloadAnalysisJson() {
+  if (!STATE.activeInvestigation) return;
+  const invId = STATE.activeInvestigation.investigation_id || "investigation";
+  const jsonStr = JSON.stringify(STATE.activeInvestigation, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cryptoguard_${invId}_analysis.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ═══════════════════════════════ HEALTH & DASHBOARD ═══════════════════

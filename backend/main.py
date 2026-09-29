@@ -100,10 +100,23 @@ app = FastAPI(
     version="2.0.0",
 )
 
+_cors_env = os.getenv("CORS_ORIGINS", "")
+if _cors_env:
+    ALLOWED_ORIGINS = [orig.strip() for orig in _cors_env.split(",") if orig.strip()]
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 app.add_middleware(SilentProbeMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["*"],
@@ -219,20 +232,22 @@ def trace_wallet(
             detail=f"Invalid {SUPPORTED_CHAINS[chain]['name']} address format."
         )
 
-    # Demo Mode: Explicit toggle or fallback when API key is missing
-    is_demo_target = wallet.lower() in ("0x742d35cc6634c0532925a3b844bc454e4438f44e", "0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
+    # Demo Mode: Explicit toggle or recognized sample fixture wallet
+    is_demo_target = wallet.lower() in (
+        "0x742d35cc6634c0532925a3b844bc454e4438f44e",
+        "0x111122223333444455556666777788889999aaaa",
+        "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+    )
     needs_key = SUPPORTED_CHAINS[chain]["type"] in ("evm", "tron")
     has_key = bool(ETHERSCAN_API_KEY) if SUPPORTED_CHAINS[chain]["type"] == "evm" else bool(TRONGRID_API_KEY)
 
-    if demo_mode or is_demo_target or (needs_key and not has_key):
+    # 1. Deterministic Demo Mode
+    if demo_mode or is_demo_target:
         result = demo_trace_result(wallet=wallet, chain=chain, case_ref=case_ref or "NCRP-2026-849102")
         result["investigation_id"] = inv_id
         result["timestamp"] = datetime.now(timezone.utc).isoformat()
         result["_demo_mode"] = True
-        if not demo_mode and needs_key and not has_key:
-            result["_warning"] = "Live blockchain API key not configured in .env. Returning deterministic demo data."
 
-        # Persist into database
         save_investigation(
             inv_id=inv_id,
             wallet=wallet,
@@ -243,6 +258,51 @@ def trace_wallet(
             is_demo=True
         )
         return JSONResponse(status_code=200, content=result)
+
+    # 2. Live Mode requested but required credentials missing
+    if needs_key and not has_key:
+        warning_title = "Live blockchain API key not detected."
+        warning_msg = "Live wallet tracing requires the configured blockchain API/RPC credentials. Switch to Demo Mode for the offline demonstration."
+        return JSONResponse(status_code=200, content={
+            "wallet": wallet,
+            "chain": chain,
+            "case_ref": case_ref or f"CASE-{datetime.now().strftime('%Y%m%d%H%M')}",
+            "investigation_id": inv_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "_demo_mode": False,
+            "_live_key_missing": True,
+            "warning_title": warning_title,
+            "warning_message": warning_msg,
+            "total_transactions_scanned": 0,
+            "hops_searched": hops,
+            "matches": [],
+            "top_match": None,
+            "risk": {
+                "risk_score": 0,
+                "risk_level": "PENDING_KEY",
+                "flags": ["live_credentials_missing"],
+                "typologies": ["Live on-chain analysis paused — blockchain API credentials required"],
+                "details": {}
+            },
+            "wallet_classification": {
+                "label": "Live Mode (API Key Required)",
+                "confidence": 0,
+                "category": "live_pending"
+            },
+            "wallet_features": {},
+            "sahyog_routing": {},
+            "nodes": [{
+                "id": wallet,
+                "label": "Target (API Key Required)",
+                "wallet_type": "target",
+                "risk_level": "LOW",
+                "is_root": True
+            }],
+            "edges": [],
+            "timeline": [],
+            "evidence": [],
+            "note": "Live wallet tracing requires configured blockchain API/RPC credentials. Switch to Demo Mode for offline demonstration."
+        })
 
     # Live Blockchain Tracing
     try:
@@ -378,9 +438,10 @@ def copilot_query(payload: CopilotQueryRequest):
     response = answer_investigation_query(trace_data, payload.query)
     return CopilotQueryResponse(
         answer=response["answer"],
-        engine=response.get("engine", "Deterministic Intelligence Engine"),
+        engine=response.get("engine", "Hybrid Forensic Copilot (Deterministic Engine)"),
         confidence=response.get("confidence", "High"),
-        category=response.get("category", "General Analysis")
+        category=response.get("category", "General Analysis"),
+        chips=response.get("chips", [])
     )
 
 

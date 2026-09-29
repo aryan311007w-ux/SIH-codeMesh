@@ -222,6 +222,7 @@ class CopilotQueryResponse(BaseModel):
     engine:     str
     confidence: str
     category:   str
+    chips:      Optional[List[str]] = []
 
 
 class EvidenceUpdateRequest(BaseModel):

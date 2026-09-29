@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CryptoGuard AI · Blockchain Investigation & VASP Attribution</title>
   <meta name="description" content="AI-Powered Blockchain Investigation and VASP Attribution Platform for Law Enforcement Agencies — SIH 2026 Problem Statement SIH26182." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <!-- Local vis-network library -->
@@ -150,6 +148,21 @@
       </button>
     </div>
 
+    <!-- Sample Test Wallets (Clearly Labelled) -->
+    <div class="sample-wallets-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 20px 0;">
+      <span class="small dim" style="font-weight:600;">Sample Addresses:</span>
+      <button class="copilot-chip" onclick="loadSampleWallet('0x742d35cc6634c0532925a3b844bc454e4438f44e', 'ethereum', true)">
+        Sample 1 (Demo): Suspect Multi-Hop Flow (0x742d…f44e)
+      </button>
+      <button class="copilot-chip" onclick="loadSampleWallet('0x111122223333444455556666777788889999aaaa', 'ethereum', true)">
+        Sample 2 (Demo): Intermediary Mule Alpha (0x1111…aaaa)
+      </button>
+      <button class="copilot-chip" onclick="loadSampleWallet('0xd8da6bf26964af9d7eed9e03e53415d37aa96045', 'ethereum', false)">
+        Sample 3 (Benchmark): Public Ethereum Target (0xd8da…6045)
+      </button>
+      <span class="small dim" style="font-style:italic;">*(Demo Fixture & Benchmark Data — For Evaluation & Testing Only)*</span>
+    </div>
+
     <!-- Dashboard Content Grid -->
     <div class="db-grid">
       <!-- Recent Investigations Table -->
@@ -211,16 +224,35 @@
       </div>
 
       <div class="ws-actions">
-        <button class="btn-secondary" onclick="downloadCurrentPdfReport()">
+        <button class="btn-secondary" onclick="downloadCurrentPdfReport()" title="Download Official Forensic PDF Report">
           <span>📄</span> PDF Report
         </button>
-        <button class="btn-primary" onclick="openCybercrimeTab()">
+        <button class="btn-secondary" onclick="openAnalysisDataModal()" title="View Raw JSON Investigation Payload">
+          <span>🔍</span> View Analysis Data
+        </button>
+        <button class="btn-primary" onclick="openCybercrimeTab()" title="Draft Section 91 CrPC Notice">
           <span>⚖️</span> Section 91 Notice
         </button>
-        <button class="btn-secondary" onclick="toggleCopilot()">
+        <button class="btn-secondary" onclick="toggleCopilot()" title="AI Investigation Copilot">
           <span>🤖</span> Copilot
         </button>
       </div>
+    </div>
+
+    <!-- Live Mode Missing Key Warning Banner -->
+    <div id="wsLiveWarningBanner" class="alert-box-warning hidden" style="background:rgba(245, 158, 11, 0.12);border:1px solid rgba(245, 158, 11, 0.4);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:22px;">⚠️</span>
+        <div>
+          <b style="color:#f59e0b;font-size:13px;" id="wsLiveWarningTitle">Live blockchain API key not detected.</b>
+          <p style="color:#e2e8f0;font-size:12px;margin:2px 0 0 0;" id="wsLiveWarningMsg">
+            Live wallet tracing requires the configured blockchain API/RPC credentials. Switch to Demo Mode for the offline demonstration.
+          </p>
+        </div>
+      </div>
+      <button class="btn-primary btn-sm" id="btnSwitchToDemo" onclick="retryActiveWalletInDemoMode()">
+        Switch to Demo Mode
+      </button>
     </div>
 
     <!-- Workspace Tab Navigation -->
@@ -315,7 +347,7 @@
 
     <!-- ── TAB 2: TRANSACTION GRAPH ── -->
     <div id="tabGraph" class="ws-tab-pane hidden">
-      <div class="graph-wrapper">
+      <div class="graph-wrapper" id="graphWrapper">
         <div class="graph-toolbar">
           <select id="graphFilterSelect" class="input-field" style="min-width:140px;padding:4px 8px;font-size:11px;" onchange="filterGraphNodes()">
             <option value="all">Show All Nodes</option>
@@ -325,9 +357,10 @@
           </select>
           <button class="btn-secondary btn-sm" onclick="resetGraphView()">Reset View</button>
           <button class="btn-secondary btn-sm" onclick="toggleGraphPhysics()">Toggle Physics</button>
+          <button class="btn-secondary btn-sm" id="graphExpandBtn" onclick="toggleGraphFullscreen()"><span>⛶</span> Expand Graph</button>
         </div>
 
-        <div class="graph-legend-box">
+        <div class="graph-legend-box" id="graphLegendBox">
           <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span> Target Wallet</div>
           <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> VASP / Exchange</div>
           <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> Intermediary Mule</div>
@@ -340,7 +373,10 @@
         <div class="node-inspector-drawer" id="nodeInspectorDrawer">
           <div class="inspector-header">
             <b style="font-size:13px;color:#fff;">Node Inspector</b>
-            <span class="small dim" id="inspectorNodeType">Target</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="small dim" id="inspectorNodeType">Target</span>
+              <button class="inspector-close" onclick="closeNodeInspector()" title="Close Inspector">✕</button>
+            </div>
           </div>
           <div style="font-size:11px;font-family:var(--font-mono);color:#60a5fa;word-break:break-all;" id="inspectorAddress">
             Select a node in the graph to inspect forensic details.
@@ -721,14 +757,38 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════ RAW JSON / EVIDENCE MODAL ═══════════════ -->
+<div class="modal-overlay hidden" id="modalAnalysisData" onclick="if(event.target===this) closeAnalysisDataModal()">
+  <div class="modal-card modal-lg">
+    <div class="modal-header">
+      <div>
+        <h3 style="margin:0;font-size:16px;color:#fff;">🔍 Investigation Analysis Data (Raw JSON)</h3>
+        <p class="small muted" style="margin:4px 0 0 0;">Forensic telemetry, multi-factor attribution scores, risk indicators, and graph payload</p>
+      </div>
+      <button class="inspector-close" onclick="closeAnalysisDataModal()" title="Close">✕</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <span class="small dim mono" id="rawJsonMeta">Payload: INV-DEMO | 0.00 KB</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary btn-sm" id="btnCopyJson" onclick="copyAnalysisJson()">📋 Copy JSON</button>
+        <button class="btn-primary btn-sm" onclick="downloadAnalysisJson()">💾 Download JSON</button>
+      </div>
+    </div>
+    <pre id="analysisJsonViewer" class="raw-json-pre"><code>Loading case payload...</code></pre>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border-color);">
+      <button class="btn-secondary btn-sm" onclick="closeAnalysisDataModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════ COPILOT SLIDE-OUT DRAWER ═══════════════ -->
 <aside class="copilot-drawer" id="copilotDrawer">
   <div class="copilot-header">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">🤖</span>
       <div>
-        <b style="font-size:13px;color:#fff;">Investigation Copilot</b>
-        <div class="small dim" id="copilotEngineBadge">Deterministic Intelligence Engine</div>
+        <b style="font-size:13px;color:#fff;">Hybrid Forensic Copilot</b>
+        <div class="small dim" id="copilotEngineBadge">Hybrid Forensic Copilot (Deterministic Engine)</div>
       </div>
     </div>
     <button class="inspector-close" onclick="toggleCopilot()">✕</button>
@@ -736,15 +796,16 @@
 
   <div class="copilot-body" id="copilotChatBody">
     <div class="copilot-msg assistant">
-      Hello Investigator. I am <b>CryptoGuard Copilot</b>. I analyze on-chain evidence and VASP attribution for the active case.
+      Hello Investigator. I am <b>CryptoGuard Hybrid Forensic Copilot</b>. I analyze on-chain telemetry, attribution weights, and AML risk signals for the active case.
       <br/><br/>
-      You can ask me questions about this investigation:
+      Select a forensic query or type your question below:
       <div class="copilot-suggested-queries">
-        <span class="copilot-chip" onclick="askCopilot('Why was CoinDCX attributed?')">Why CoinDCX?</span>
-        <span class="copilot-chip" onclick="askCopilot('What is the shortest transaction path?')">Shortest Path</span>
-        <span class="copilot-chip" onclick="askCopilot('What are the strongest risk indicators?')">Risk Indicators</span>
-        <span class="copilot-chip" onclick="askCopilot('Show the largest transaction.')">Largest Tx</span>
-        <span class="copilot-chip" onclick="askCopilot('Summarize this investigation.')">Case Summary</span>
+        <span class="copilot-chip" onclick="askCopilot('Why was this VASP attributed?')">Why was this VASP attributed?</span>
+        <span class="copilot-chip" onclick="askCopilot('Show the strongest evidence')">Strongest Evidence</span>
+        <span class="copilot-chip" onclick="askCopilot('What are the main risk indicators?')">Risk Indicators</span>
+        <span class="copilot-chip" onclick="askCopilot('Show the shortest transaction path')">Shortest Path</span>
+        <span class="copilot-chip" onclick="askCopilot('What KYC information should be requested?')">KYC Requisition</span>
+        <span class="copilot-chip" onclick="askCopilot('Summarize this investigation')">Case Summary</span>
       </div>
     </div>
   </div>
