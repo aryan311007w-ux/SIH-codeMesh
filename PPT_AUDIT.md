@@ -16,7 +16,7 @@
 | **Format Compliance** | Strict match to reference layout & density | Preserves official SIH 2026 logos, footers, & structure | **PASS** |
 | **Technical Claims** | 100% matched to active repository code | Fully cross-referenced against backend modules | **PASS** |
 | **Team Information** | No reference project leaks (`144636`, `NODEMESH`) | Registered Name: `CodeMesh`; ID: marked for SIH portal | **PASS** |
-| **Verified URLs** | Only genuine repository URLs | Active GitHub repository link; others cleanly marked | **PASS** |
+| **Verified URLs** | Only genuine repository & deployment URLs | Active GitHub link & Render live deployment (`https://cryptoguard-ai.onrender.com`) | **PASS** |
 | **Unsupported Claims** | Zero fake metrics, fake AI, or fake freezing | All removed; limits explicitly noted | **PASS** |
 | **Application Integrity**| Application code untouched | Zero changes to backend/frontend code | **PASS** |
 

@@ -107,8 +107,8 @@
 - Database is persistent SQLite (`cryptoguard.db`).
 
 ### 4. Verified Links
-- GitHub: `https://github.com/aryan311007w-ux/SIH-codeMesh` (Matches git remote).
-- Website & Demo Video: Clearly marked `To be updated after deployment` (No fabricated URLs).
+- Website: `https://cryptoguard-ai.onrender.com` (Live production deployment on Render).
+- Demo Video: Marked `To be updated after deployment`.
 
 ---
 
