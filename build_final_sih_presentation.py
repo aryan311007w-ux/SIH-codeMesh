@@ -84,128 +84,14 @@ def build_presentation():
     # SLIDE 1: TITLE PAGE
     # ═════════════════════════════════════════════════════════════════════════
     s1 = prs.slides[0]
-    
-    # Remove clutter and placeholders from Slide 1
-    shapes_to_remove_s1 = []
-    for s in s1.shapes:
-        if s.name in ["Picture 4", "Freeform: Shape 26", "Rectangle 24"]: # cartoon illustration & background rectangle
-            shapes_to_remove_s1.append(s)
-        elif s.has_text_frame and ("Problem Statement ID" in s.text_frame.text or "TITLE PAGE" in s.text_frame.text):
-            shapes_to_remove_s1.append(s)
-    for s in shapes_to_remove_s1:
+    for s in list(s1.shapes):
         sp = s._element
         sp.getparent().remove(sp)
 
-    # Add official Ministry / AICTE logo on top left of Slide 1
-    ministry_logo_path = r"C:\Users\SKYNET\.gemini\antigravity-ide\brain\d9effeed-c96c-49a0-8dec-5dda1b8f6577\scratch\ref_images\page_1_img_1_X5.png"
-    if os.path.exists(ministry_logo_path):
-        s1.shapes.add_picture(ministry_logo_path, Inches(0.60), Inches(0.12), width=Inches(2.40), height=Inches(1.05))
+    title_slide_img = r"d:\SIH 2\SIH26182_TITLE_SLIDE.png"
+    if os.path.exists(title_slide_img):
+        s1.shapes.add_picture(title_slide_img, Inches(0), Inches(0), width=prs.slide_width, height=prs.slide_height)
 
-    # Update Title shape
-    for s in s1.shapes:
-        if s.has_text_frame and "SMART INDIA HACKATHON" in s.text_frame.text:
-            s.text_frame.text = "SMART INDIA HACKATHON 2026"
-            p = s.text_frame.paragraphs[0]
-            p.font.bold = True
-            p.font.size = Pt(24)
-            p.font.color.rgb = NAVY
-
-    # Left: Official Project Details Card
-    s1_left = Inches(0.60)
-    s1_top = Inches(1.55)
-    s1_w = Inches(7.40)
-    s1_h = Inches(5.10)
-    card_info = add_card(s1, s1_left, s1_top, s1_w, s1_h, bg_color=CARD_BG, border_color=BORDER_BLUE, border_width=1.5)
-    tf_info = card_info.text_frame
-    tf_info.word_wrap = True
-    tf_info.margin_left = Inches(0.28)
-    tf_info.margin_top = Inches(0.25)
-    tf_info.margin_right = Inches(0.28)
-
-    p = tf_info.paragraphs[0]
-    p.text = "Problem Statement ID: SIH26182"
-    p.font.bold = True
-    p.font.size = Pt(15)
-    p.font.color.rgb = ELECTRIC_BLUE
-    p.space_after = Pt(8)
-
-    p = tf_info.add_paragraph()
-    p.text = "Problem Statement Title:"
-    p.font.bold = True
-    p.font.size = Pt(11)
-    p.font.color.rgb = SLATE_TEXT
-
-    p = tf_info.add_paragraph()
-    p.text = "Automated Attribution of Unknown Cryptocurrency Wallets to Nearest Virtual Asset Service Providers (VASPs) through Blockchain Intelligence APIs"
-    p.font.bold = True
-    p.font.size = Pt(13)
-    p.font.color.rgb = NAVY
-    p.space_after = Pt(14)
-
-    fields = [
-        ("Theme", "Blockchain & Cybersecurity"),
-        ("PS Category", "Software"),
-        ("Team ID", "To be finalized on SIH Portal"),
-        ("Team Name (Registered)", "CodeMesh"),
-        ("Project / Solution", "CryptoGuard AI"),
-    ]
-    for label, val in fields:
-        p = tf_info.add_paragraph()
-        run1 = p.add_run()
-        run1.text = f"{label}: "
-        run1.font.bold = True
-        run1.font.size = Pt(12)
-        run1.font.color.rgb = SLATE_TEXT
-        
-        run2 = p.add_run()
-        run2.text = val
-        run2.font.bold = (label in ["Project / Solution", "Team Name (Registered)"])
-        run2.font.size = Pt(13.5 if label == "Project / Solution" else 12)
-        run2.font.color.rgb = ELECTRIC_BLUE if label == "Project / Solution" else NAVY
-        p.space_after = Pt(7)
-
-    # Right: Executive Solution Brief Card
-    s1_r_left = Inches(8.25)
-    s1_r_w = Inches(4.50)
-    card_sc = add_card(s1, s1_r_left, s1_top, s1_r_w, s1_h, bg_color=LIGHT_BLUE_BG, border_color=BORDER_BLUE, border_width=1.5)
-    tf_sc = card_sc.text_frame
-    tf_sc.word_wrap = True
-    tf_sc.margin_left = Inches(0.25)
-    tf_sc.margin_top = Inches(0.25)
-    tf_sc.margin_right = Inches(0.25)
-
-    p = tf_sc.paragraphs[0]
-    p.text = "CRYPTOGUARD AI — SOLUTION BRIEF"
-    p.font.bold = True
-    p.font.size = Pt(13)
-    p.font.color.rgb = NAVY
-    p.space_after = Pt(10)
-
-    p = tf_sc.add_paragraph()
-    p.text = "An automated, auditable blockchain investigation console empowering Indian Law Enforcement Agencies (LEAs) to trace illicit crypto flows and identify cashout exchanges."
-    p.font.size = Pt(10.5)
-    p.font.color.rgb = SLATE_TEXT
-    p.space_after = Pt(12)
-
-    highlights = [
-        ("Multi-Chain Tracing", "Directed BFS graph walk across Ethereum, BSC, Polygon, Tron, and Bitcoin."),
-        ("4-Factor VASP Scoring", "Proximity (40%), Volume (30%), Recency (20%), and Registry Trust (10%)."),
-        ("10-Signal AML Engine", "Sanctions, mixers, peel chains, rapid exit, and structuring heuristics."),
-        ("Legal Workflow Integration", "Automated Section 91 CrPC requisition notices & court-admissible PDF reports."),
-    ]
-    for h_title, h_desc in highlights:
-        p = tf_sc.add_paragraph()
-        r1 = p.add_run()
-        r1.text = f"• {h_title}: "
-        r1.font.bold = True
-        r1.font.size = Pt(10)
-        r1.font.color.rgb = DARK_BLUE
-        
-        r2 = p.add_run()
-        r2.text = h_desc
-        r2.font.size = Pt(9.5)
-        r2.font.color.rgb = SLATE_TEXT
-        p.space_after = Pt(6)
 
     # ═════════════════════════════════════════════════════════════════════════
     # SLIDE 2: IDEA / PROPOSED SOLUTION

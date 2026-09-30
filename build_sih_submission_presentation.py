@@ -87,129 +87,17 @@ def build_submission_presentation():
             sp.getparent().remove(sp)
 
     # ═════════════════════════════════════════════════════════════════════════
-    # SLIDE 1: TITLE PAGE
+    # SLIDE 1: TITLE PAGE (HIGH-RESOLUTION NANO BANANA TITLE SLIDE)
     # ═════════════════════════════════════════════════════════════════════════
     s1 = prs.slides[0]
-    
-    shapes_to_remove_s1 = []
-    for s in s1.shapes:
-        if s.name in ["Picture 4", "Freeform: Shape 26", "Rectangle 24"]:
-            shapes_to_remove_s1.append(s)
-        elif s.has_text_frame and ("Problem Statement ID" in s.text_frame.text or "TITLE PAGE" in s.text_frame.text):
-            shapes_to_remove_s1.append(s)
-    for s in shapes_to_remove_s1:
+    for s in list(s1.shapes):
         sp = s._element
         sp.getparent().remove(sp)
 
-    ministry_logo = r"C:\Users\SKYNET\.gemini\antigravity-ide\brain\d9effeed-c96c-49a0-8dec-5dda1b8f6577\scratch\ref_images\page_1_img_1_X5.png"
-    if os.path.exists(ministry_logo):
-        s1.shapes.add_picture(ministry_logo, Inches(0.60), Inches(0.12), width=Inches(2.40), height=Inches(1.05))
+    title_slide_img = r"d:\SIH 2\SIH26182_TITLE_SLIDE.png"
+    if os.path.exists(title_slide_img):
+        s1.shapes.add_picture(title_slide_img, Inches(0), Inches(0), width=prs.slide_width, height=prs.slide_height)
 
-    for s in s1.shapes:
-        if s.has_text_frame and "SMART INDIA HACKATHON" in s.text_frame.text:
-            s.text_frame.text = "SMART INDIA HACKATHON 2026"
-            p = s.text_frame.paragraphs[0]
-            p.font.bold = True
-            p.font.size = Pt(24)
-            p.font.color.rgb = NAVY
-
-    # Left: Administrative & Problem Identification Card
-    s1_left = Inches(0.60)
-    s1_top = Inches(1.50)
-    s1_w = Inches(7.40)
-    s1_h = Inches(5.15)
-    card_info = add_card(s1, s1_left, s1_top, s1_w, s1_h, bg_color=CARD_BG, border_color=BORDER_BLUE, border_width=1.5)
-    tf_info = card_info.text_frame
-    tf_info.word_wrap = True
-    tf_info.margin_left = Inches(0.28)
-    tf_info.margin_top = Inches(0.22)
-    tf_info.margin_right = Inches(0.28)
-
-    p = tf_info.paragraphs[0]
-    p.text = "Problem Statement ID: SIH26182"
-    p.font.bold = True
-    p.font.size = Pt(15)
-    p.font.color.rgb = ELECTRIC_BLUE
-    p.space_after = Pt(6)
-
-    p = tf_info.add_paragraph()
-    p.text = "Problem Statement Title:"
-    p.font.bold = True
-    p.font.size = Pt(10.5)
-    p.font.color.rgb = SLATE_TEXT
-
-    p = tf_info.add_paragraph()
-    p.text = "Automated Attribution of Unknown Cryptocurrency Wallets to Nearest Virtual Asset Service Providers (VASPs) through Blockchain Intelligence APIs"
-    p.font.bold = True
-    p.font.size = Pt(12.5)
-    p.font.color.rgb = NAVY
-    p.space_after = Pt(12)
-
-    fields = [
-        ("Theme", "Blockchain & Cybersecurity"),
-        ("PS Category", "Software"),
-        ("Team ID", "To be finalized on SIH Portal"),
-        ("Team Name (Registered)", "CodeMesh"),
-        ("Project / Solution", "CryptoGuard AI"),
-    ]
-    for label, val in fields:
-        p = tf_info.add_paragraph()
-        r1 = p.add_run()
-        r1.text = f"{label}: "
-        r1.font.bold = True
-        r1.font.size = Pt(11.5)
-        r1.font.color.rgb = SLATE_TEXT
-        
-        r2 = p.add_run()
-        r2.text = val
-        r2.font.bold = (label in ["Project / Solution", "Team Name (Registered)"])
-        r2.font.size = Pt(13 if label == "Project / Solution" else 11.5)
-        r2.font.color.rgb = ELECTRIC_BLUE if label == "Project / Solution" else NAVY
-        p.space_after = Pt(5.5)
-
-    p = tf_info.add_paragraph()
-    r_tag = p.add_run()
-    r_tag.text = "CORE PILLARS: Multi-Chain Tracing | 4-Factor VASP Scoring | 10-Signal AML Engine | Section 91 CrPC Notice"
-    r_tag.font.bold = True
-    r_tag.font.size = Pt(9)
-    r_tag.font.color.rgb = CYAN_ACCENT
-
-    # Right: Hero Visual Emblem & Executive Brief Card
-    s1_r_left = Inches(8.25)
-    s1_r_w = Inches(4.50)
-    
-    # Embed the Nano Banana Hero Brand Emblem
-    emblem_path = os.path.join(visuals_dir, "visual_slide1_hero_emblem.jpg")
-    if os.path.exists(emblem_path):
-        s1.shapes.add_picture(emblem_path, s1_r_left + Inches(0.75), s1_top, width=Inches(3.00), height=Inches(3.00))
-
-    # Brief box below emblem
-    card_sc = add_card(s1, s1_r_left, s1_top + Inches(3.10), s1_r_w, Inches(2.05), bg_color=LIGHT_BLUE_BG, border_color=BORDER_BLUE, border_width=1.2)
-    tf_sc = card_sc.text_frame
-    tf_sc.word_wrap = True
-    tf_sc.margin_left = Inches(0.20)
-    tf_sc.margin_top = Inches(0.12)
-    tf_sc.margin_right = Inches(0.20)
-
-    p = tf_sc.paragraphs[0]
-    p.text = "CRYPTOGUARD AI — SOLUTION BRIEF"
-    p.font.bold = True
-    p.font.size = Pt(11)
-    p.font.color.rgb = NAVY
-    p.space_after = Pt(4)
-
-    brief_bullets = [
-        "Primary Goal: Automatically attribute unknown crypto wallets to nearest VASPs.",
-        "Target Users: Indian LEAs, State Cyber Cells, I4C, and FIU-IND compliance units.",
-        "Regulatory Scope: PMLA 2002 Reporting Entities & Section 91 CrPC requisitions.",
-        "Repository: github.com/aryan311007w-ux/SIH-codeMesh",
-    ]
-    for b in brief_bullets:
-        p = tf_sc.add_paragraph()
-        p.text = f"• {b}"
-        p.font.size = Pt(9)
-        p.font.color.rgb = SLATE_TEXT
-        p.space_after = Pt(2)
 
     # ═════════════════════════════════════════════════════════════════════════
     # SLIDE 2: IDEA / PROPOSED SOLUTION (HERO VISUAL SLIDE)
